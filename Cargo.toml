@@ -7,3 +7,4 @@ authors = ["clrnd <welcometothechango@gmail.com>"]
 gl = "*"
 glfw = "*"
 image = "*"
+cgmath = "*"

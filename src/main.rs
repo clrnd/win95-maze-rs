@@ -1,26 +1,69 @@
 extern crate gl;
 extern crate glfw;
 extern crate image;
+extern crate cgmath;
 
 mod util;
 mod shader;
 
-use shader::Shader;
-use util::*;
-
-use image::GenericImage;
-
 use std::mem;
 use std::path::Path;
 use std::ptr;
+use std::ffi::CStr;
+
+use image::GenericImage;
+use cgmath::{Matrix4, Deg, Rad, perspective, vec3};
+use cgmath::prelude::*;
 use glfw::{Action, Context, Key};
 use gl::types::*;
 
+use shader::Shader;
 
-const VERTICES: [f32; 24] = [
-    -0.5, -0.5, 0.0,  1.0, 0.0, 0.0,  0.0, 0.0,
-     0.5, -0.5, 0.0,  0.0, 1.0, 0.0,  1.0, 0.0,
-     0.0,  0.5, 0.0,  0.0, 0.0, 1.0,  0.5, 1.0
+
+const WIDTH: u32 = 800;
+const HEIGHT: u32 = 600;
+const VERTICES: [f32; 180] = [
+    -0.5, -0.5, -0.5,  0.0, 0.0,
+     0.5, -0.5, -0.5,  1.0, 0.0,
+     0.5,  0.5, -0.5,  1.0, 1.0,
+     0.5,  0.5, -0.5,  1.0, 1.0,
+    -0.5,  0.5, -0.5,  0.0, 1.0,
+    -0.5, -0.5, -0.5,  0.0, 0.0,
+
+    -0.5, -0.5,  0.5,  0.0, 0.0,
+     0.5, -0.5,  0.5,  1.0, 0.0,
+     0.5,  0.5,  0.5,  1.0, 1.0,
+     0.5,  0.5,  0.5,  1.0, 1.0,
+    -0.5,  0.5,  0.5,  0.0, 1.0,
+    -0.5, -0.5,  0.5,  0.0, 0.0,
+
+    -0.5,  0.5,  0.5,  1.0, 0.0,
+    -0.5,  0.5, -0.5,  1.0, 1.0,
+    -0.5, -0.5, -0.5,  0.0, 1.0,
+    -0.5, -0.5, -0.5,  0.0, 1.0,
+    -0.5, -0.5,  0.5,  0.0, 0.0,
+    -0.5,  0.5,  0.5,  1.0, 0.0,
+
+     0.5,  0.5,  0.5,  1.0, 0.0,
+     0.5,  0.5, -0.5,  1.0, 1.0,
+     0.5, -0.5, -0.5,  0.0, 1.0,
+     0.5, -0.5, -0.5,  0.0, 1.0,
+     0.5, -0.5,  0.5,  0.0, 0.0,
+     0.5,  0.5,  0.5,  1.0, 0.0,
+
+    -0.5, -0.5, -0.5,  0.0, 1.0,
+     0.5, -0.5, -0.5,  1.0, 1.0,
+     0.5, -0.5,  0.5,  1.0, 0.0,
+     0.5, -0.5,  0.5,  1.0, 0.0,
+    -0.5, -0.5,  0.5,  0.0, 0.0,
+    -0.5, -0.5, -0.5,  0.0, 1.0,
+
+    -0.5,  0.5, -0.5,  0.0, 1.0,
+     0.5,  0.5, -0.5,  1.0, 1.0,
+     0.5,  0.5,  0.5,  1.0, 0.0,
+     0.5,  0.5,  0.5,  1.0, 0.0,
+    -0.5,  0.5,  0.5,  0.0, 0.0,
+    -0.5,  0.5, -0.5,  0.0, 1.0
 ];
 
 
@@ -34,7 +77,11 @@ fn main() {
         glfw.window_hint(glfw::WindowHint::OpenGlForwardCompat(true));
     }
 
-    let (mut window, events) = glfw.create_window(800, 600, "Hello this is window", glfw::WindowMode::Windowed)
+    let (mut window, events) =
+        glfw.create_window(WIDTH,
+                           HEIGHT,
+                           "Hello this is window",
+                           glfw::WindowMode::Windowed)
         .expect("Failed to create GLFW window.");
 
     window.set_key_polling(true);
@@ -43,6 +90,18 @@ fn main() {
     gl::load_with(|s| window.get_proc_address(s) as *const _);
 
     let (shader_program, vao, texture1, texture2) = unsafe { set_up() };
+
+
+    let positions = [
+        vec3( 0.0,  0.0,  0.0),
+        vec3( 2.0,  5.0, -15.0),
+        vec3(-1.5, -2.2, -2.5),
+        vec3(-3.8, -2.0, -12.3)
+    ];
+
+    let ratio = WIDTH as f32 / HEIGHT as f32;
+    let view = Matrix4::from_translation(vec3(0.0, 0.0, -3.0));
+    let proj = perspective(Deg(45.0), ratio, 0.1, 100.0);
 
     while !window.should_close() {
         for (_, event) in glfw::flush_messages(&events) {
@@ -53,7 +112,7 @@ fn main() {
 
         unsafe {
             gl::ClearColor(0.2, 0.3, 0.3, 1.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
             gl::ActiveTexture(gl::TEXTURE0);
             gl::BindTexture(gl::TEXTURE_2D, texture1);
@@ -61,10 +120,19 @@ fn main() {
             gl::BindTexture(gl::TEXTURE_2D, texture2);
 
             shader_program.use_program();
-            shader_program.set_float(&c_str("t"), t.sin() as f32);
+            shader_program.set_float(c_str!("t"), t as f32);
+
+            shader_program.set_mat4(c_str!("view"), view);
+            shader_program.set_mat4(c_str!("proj"), proj);
 
             gl::BindVertexArray(vao);
-            gl::DrawArrays(gl::TRIANGLES, 0, 3);
+
+            for v in positions.iter() {
+                let model = Matrix4::from_translation(*v) *
+                            Matrix4::from_angle_x(Rad(t as f32));
+                shader_program.set_mat4(c_str!("model"), model);
+                gl::DrawArrays(gl::TRIANGLES, 0, 36);
+            }
         }
 
         window.swap_buffers();
@@ -73,12 +141,14 @@ fn main() {
 }
 
 unsafe fn set_up() -> (Shader, GLuint, GLuint, GLuint) {
+    gl::Enable(gl::DEPTH_TEST);
+
     // vertex buffer obj
     let mut vbo = 0;
     gl::GenBuffers(1, &mut vbo);
     gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
     gl::BufferData(gl::ARRAY_BUFFER,
-                   mem::size_of::<[f32; 24]>() as isize,
+                   mem::size_of::<[f32; 180]>() as isize,
                    &VERTICES[0] as *const f32 as *const _,
                    gl::STATIC_DRAW);
 
@@ -88,19 +158,14 @@ unsafe fn set_up() -> (Shader, GLuint, GLuint, GLuint) {
     gl::BindVertexArray(vao);
     // aPos = 0
     gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE,
-                            8 * mem::size_of::<GLfloat>() as GLint,
+                            5 * mem::size_of::<GLfloat>() as GLint,
                             ptr::null());
     gl::EnableVertexAttribArray(0);
-    // aColor = 1
-    gl::VertexAttribPointer(1, 3, gl::FLOAT, gl::FALSE,
-                            8 * mem::size_of::<GLfloat>() as GLint,
+    // aTex = 1
+    gl::VertexAttribPointer(1, 2, gl::FLOAT, gl::FALSE,
+                            5 * mem::size_of::<GLfloat>() as GLint,
                             (3 * mem::size_of::<GLfloat>()) as *const GLvoid);
     gl::EnableVertexAttribArray(1);
-    // aTex = 2
-    gl::VertexAttribPointer(2, 2, gl::FLOAT, gl::FALSE,
-                            8 * mem::size_of::<GLfloat>() as GLint,
-                            (6 * mem::size_of::<GLfloat>()) as *const GLvoid);
-    gl::EnableVertexAttribArray(2);
 
 
     // texture 1
@@ -145,8 +210,8 @@ unsafe fn set_up() -> (Shader, GLuint, GLuint, GLuint) {
                                      "shaders/fragment.glsl");
 
     shader_program.use_program();
-    shader_program.set_int(&c_str("tex1"), 0);
-    shader_program.set_int(&c_str("tex2"), 1);
+    shader_program.set_int(c_str!("tex1"), 0);
+    shader_program.set_int(c_str!("tex2"), 1);
 
     (shader_program, vao, texture1, texture2)
 }

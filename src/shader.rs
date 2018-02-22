@@ -4,11 +4,10 @@ use std::io::Read;
 use std::ptr;
 use std::str;
 
+use cgmath::Matrix4;
+use cgmath::prelude::*;
 use gl;
 use gl::types::*;
-
-//use cgmath::{Matrix, Matrix4, Vector3};
-//use cgmath::prelude::*;
 
 pub struct Shader {
     pub id: u32,
@@ -62,31 +61,31 @@ impl Shader {
     }
 
     /// activate the shader
-    /// ------------------------------------------------------------------------
+
     pub unsafe fn use_program(&self) {
         gl::UseProgram(self.id)
     }
 
     /// utility uniform functions
-    /// ------------------------------------------------------------------------
-    //pub unsafe fn set_bool(&self, name: &CStr, value: bool) {
-    //    gl::Uniform1i(gl::GetUniformLocation(self.id, name.as_ptr()), value as i32);
-    //}
-    /// ------------------------------------------------------------------------
+
     pub unsafe fn set_int(&self, name: &CStr, value: i32) {
         gl::Uniform1i(gl::GetUniformLocation(self.id, name.as_ptr()), value);
     }
-    /// ------------------------------------------------------------------------
+
     pub unsafe fn set_float(&self, name: &CStr, value: f32) {
         gl::Uniform1f(gl::GetUniformLocation(self.id, name.as_ptr()), value);
     }
-    /// ------------------------------------------------------------------------
-    //pub unsafe fn set_vec3(&self, name: &CStr, x: f32, y: f32, z: f32) {
-    //    gl::Uniform3f(gl::GetUniformLocation(self.id, name.as_ptr()), x, y, z);
-    //}
+
+    pub unsafe fn set_mat4(&self, name: &CStr, value: Matrix4<f32>) {
+        gl::UniformMatrix4fv(
+            gl::GetUniformLocation(self.id, name.as_ptr()),
+            1,
+            gl::FALSE,
+            value.as_ptr());
+    }
 
     /// utility function for checking shader compilation/linking errors.
-    /// ------------------------------------------------------------------------
+
     unsafe fn check_compile_errors(&self, shader: u32, type_: &str) {
         let mut success = gl::FALSE as GLint;
         let mut info_log = Vec::with_capacity(1024);
