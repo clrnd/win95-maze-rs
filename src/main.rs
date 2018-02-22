@@ -49,7 +49,7 @@ fn main() {
             handle_window_event(&mut window, event);
         }
 
-        //let t = glfw.get_time();
+        let t = glfw.get_time();
 
         unsafe {
             gl::ClearColor(0.2, 0.3, 0.3, 1.0);
@@ -61,6 +61,7 @@ fn main() {
             gl::BindTexture(gl::TEXTURE_2D, texture2);
 
             shader_program.use_program();
+            shader_program.set_float(&c_str("t"), t.sin() as f32);
 
             gl::BindVertexArray(vao);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
