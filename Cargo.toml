@@ -6,3 +6,4 @@ authors = ["clrnd <welcometothechango@gmail.com>"]
 [dependencies]
 gl = "*"
 glfw = "*"
+image = "*"

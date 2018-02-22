@@ -1,4 +1,4 @@
-use std::ffi::{CString, CStr};
+use std::ffi::{CStr, CString};
 use std::fs::File;
 use std::io::Read;
 use std::ptr;
@@ -10,7 +10,6 @@ use gl::types::*;
 //use cgmath::{Matrix, Matrix4, Vector3};
 //use cgmath::prelude::*;
 
-
 pub struct Shader {
     pub id: u32,
 }
@@ -19,8 +18,10 @@ impl Shader {
     pub fn new(vertex_path: &str, fragment_path: &str) -> Shader {
         let mut shader = Shader { id: 0 };
         // 1. retrieve the vertex/fragment source code from filesystem
-        let mut v_shader_file = File::open(vertex_path).expect(&format!("Failed to open {}", vertex_path));
-        let mut f_shader_file = File::open(fragment_path).expect(&format!("Failed to open {}", fragment_path));
+        let mut v_shader_file =
+            File::open(vertex_path).expect(&format!("Failed to open {}", vertex_path));
+        let mut f_shader_file =
+            File::open(fragment_path).expect(&format!("Failed to open {}", fragment_path));
         let mut vertex_code = String::new();
         let mut fragment_code = String::new();
         v_shader_file
@@ -68,9 +69,9 @@ impl Shader {
 
     /// utility uniform functions
     /// ------------------------------------------------------------------------
-    pub unsafe fn set_bool(&self, name: &CStr, value: bool) {
-        gl::Uniform1i(gl::GetUniformLocation(self.id, name.as_ptr()), value as i32);
-    }
+    //pub unsafe fn set_bool(&self, name: &CStr, value: bool) {
+    //    gl::Uniform1i(gl::GetUniformLocation(self.id, name.as_ptr()), value as i32);
+    //}
     /// ------------------------------------------------------------------------
     pub unsafe fn set_int(&self, name: &CStr, value: i32) {
         gl::Uniform1i(gl::GetUniformLocation(self.id, name.as_ptr()), value);
@@ -80,9 +81,9 @@ impl Shader {
         gl::Uniform1f(gl::GetUniformLocation(self.id, name.as_ptr()), value);
     }
     /// ------------------------------------------------------------------------
-    pub unsafe fn set_vec3(&self, name: &CStr, x: f32, y: f32, z: f32) {
-        gl::Uniform3f(gl::GetUniformLocation(self.id, name.as_ptr()), x, y, z);
-    }
+    //pub unsafe fn set_vec3(&self, name: &CStr, x: f32, y: f32, z: f32) {
+    //    gl::Uniform3f(gl::GetUniformLocation(self.id, name.as_ptr()), x, y, z);
+    //}
 
     /// utility function for checking shader compilation/linking errors.
     /// ------------------------------------------------------------------------
@@ -93,23 +94,35 @@ impl Shader {
         if type_ != "PROGRAM" {
             gl::GetShaderiv(shader, gl::COMPILE_STATUS, &mut success);
             if success != gl::TRUE as GLint {
-                gl::GetShaderInfoLog(shader, 1024, ptr::null_mut(), info_log.as_mut_ptr() as *mut GLchar);
-                println!("ERROR::SHADER_COMPILATION_ERROR of type: {}\n{}\n \
-                          -- --------------------------------------------------- -- ",
-                         type_,
-                         str::from_utf8(&info_log).unwrap());
+                gl::GetShaderInfoLog(
+                    shader,
+                    1024,
+                    ptr::null_mut(),
+                    info_log.as_mut_ptr() as *mut GLchar,
+                );
+                println!(
+                    "ERROR::SHADER_COMPILATION_ERROR of type: {}\n{}\n \
+                     -- --------------------------------------------------- -- ",
+                    type_,
+                    str::from_utf8(&info_log).unwrap()
+                );
             }
-
         } else {
             gl::GetProgramiv(shader, gl::LINK_STATUS, &mut success);
             if success != gl::TRUE as GLint {
-                gl::GetProgramInfoLog(shader, 1024, ptr::null_mut(), info_log.as_mut_ptr() as *mut GLchar);
-                println!("ERROR::PROGRAM_LINKING_ERROR of type: {}\n{}\n \
-                          -- --------------------------------------------------- -- ",
-                         type_,
-                         str::from_utf8(&info_log).unwrap());
+                gl::GetProgramInfoLog(
+                    shader,
+                    1024,
+                    ptr::null_mut(),
+                    info_log.as_mut_ptr() as *mut GLchar,
+                );
+                println!(
+                    "ERROR::PROGRAM_LINKING_ERROR of type: {}\n{}\n \
+                     -- --------------------------------------------------- -- ",
+                    type_,
+                    str::from_utf8(&info_log).unwrap()
+                );
             }
         }
-
     }
 }
