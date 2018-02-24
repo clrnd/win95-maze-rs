@@ -2,9 +2,11 @@ extern crate gl;
 extern crate glfw;
 extern crate image;
 extern crate cgmath;
+extern crate rand;
 
 mod util;
 mod shader;
+mod maze;
 
 use std::mem;
 use std::path::Path;
@@ -12,62 +14,35 @@ use std::ptr;
 use std::ffi::CStr;
 
 use image::GenericImage;
-use cgmath::{Matrix4, Deg, Rad, perspective, vec3};
+use cgmath::{Matrix4, Deg, Rad, perspective, Point3, vec3};
 use cgmath::prelude::*;
 use glfw::{Action, Context, Key};
 use gl::types::*;
 
 use shader::Shader;
+use maze::Maze;
 
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
-const VERTICES: [f32; 180] = [
-    -0.5, -0.5, -0.5,  0.0, 0.0,
-     0.5, -0.5, -0.5,  1.0, 0.0,
-     0.5,  0.5, -0.5,  1.0, 1.0,
-     0.5,  0.5, -0.5,  1.0, 1.0,
-    -0.5,  0.5, -0.5,  0.0, 1.0,
-    -0.5, -0.5, -0.5,  0.0, 0.0,
-
-    -0.5, -0.5,  0.5,  0.0, 0.0,
-     0.5, -0.5,  0.5,  1.0, 0.0,
-     0.5,  0.5,  0.5,  1.0, 1.0,
-     0.5,  0.5,  0.5,  1.0, 1.0,
-    -0.5,  0.5,  0.5,  0.0, 1.0,
-    -0.5, -0.5,  0.5,  0.0, 0.0,
-
-    -0.5,  0.5,  0.5,  1.0, 0.0,
-    -0.5,  0.5, -0.5,  1.0, 1.0,
-    -0.5, -0.5, -0.5,  0.0, 1.0,
-    -0.5, -0.5, -0.5,  0.0, 1.0,
-    -0.5, -0.5,  0.5,  0.0, 0.0,
-    -0.5,  0.5,  0.5,  1.0, 0.0,
-
-     0.5,  0.5,  0.5,  1.0, 0.0,
-     0.5,  0.5, -0.5,  1.0, 1.0,
-     0.5, -0.5, -0.5,  0.0, 1.0,
-     0.5, -0.5, -0.5,  0.0, 1.0,
-     0.5, -0.5,  0.5,  0.0, 0.0,
-     0.5,  0.5,  0.5,  1.0, 0.0,
-
-    -0.5, -0.5, -0.5,  0.0, 1.0,
-     0.5, -0.5, -0.5,  1.0, 1.0,
-     0.5, -0.5,  0.5,  1.0, 0.0,
-     0.5, -0.5,  0.5,  1.0, 0.0,
-    -0.5, -0.5,  0.5,  0.0, 0.0,
-    -0.5, -0.5, -0.5,  0.0, 1.0,
-
-    -0.5,  0.5, -0.5,  0.0, 1.0,
-     0.5,  0.5, -0.5,  1.0, 1.0,
-     0.5,  0.5,  0.5,  1.0, 0.0,
-     0.5,  0.5,  0.5,  1.0, 0.0,
-    -0.5,  0.5,  0.5,  0.0, 0.0,
-    -0.5,  0.5, -0.5,  0.0, 1.0
+const VERTICES: [f32; 20] = [
+    -0.5, -0.5, 0.0,  0.0, 0.0,
+    -0.5,  0.5, 0.0,  0.0, 1.0,
+     0.5,  0.5, 0.0,  1.0, 1.0,
+     0.5, -0.5, 0.0,  1.0, 0.0
+];
+const INDICES: [u32; 6] = [
+    0, 1, 3,
+    1, 2, 3
 ];
 
 
 fn main() {
+    let m = Maze::new(10, 10);
+    println!("{:?}", m);
+    println!();
+    m.print();
+
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
 
     glfw.window_hint(glfw::WindowHint::ContextVersion(3, 3));
@@ -89,7 +64,7 @@ fn main() {
 
     gl::load_with(|s| window.get_proc_address(s) as *const _);
 
-    let (shader_program, vao, texture1, texture2) = unsafe { set_up() };
+    let (shader_program, ebo, texture1, texture2) = unsafe { set_up() };
 
 
     let positions = [
@@ -100,7 +75,11 @@ fn main() {
     ];
 
     let ratio = WIDTH as f32 / HEIGHT as f32;
-    let view = Matrix4::from_translation(vec3(0.0, 0.0, -3.0));
+
+    let mut view_pos = Point3::new(0.0, 0.0, 3.0);
+    let view_dir = vec3(0.0, 0.0, -1.0);
+    let view_up = vec3(0.0, 1.0, 0.0);
+
     let proj = perspective(Deg(45.0), ratio, 0.1, 100.0);
 
     while !window.should_close() {
@@ -109,6 +88,21 @@ fn main() {
         }
 
         let t = glfw.get_time();
+
+        if window.get_key(Key::W) == Action::Press {
+            view_pos += 0.1 * view_dir;
+        }
+        if window.get_key(Key::S) == Action::Press {
+            view_pos -= 0.1 * view_dir;
+        }
+        if window.get_key(Key::A) == Action::Press {
+            view_pos -= 0.1 * view_dir.cross(view_up).normalize();
+        }
+        if window.get_key(Key::D) == Action::Press {
+            view_pos += 0.1 * view_dir.cross(view_up).normalize();
+        }
+
+        let view = Matrix4::look_at(view_pos, view_pos + view_dir, view_up);
 
         unsafe {
             gl::ClearColor(0.2, 0.3, 0.3, 1.0);
@@ -125,13 +119,11 @@ fn main() {
             shader_program.set_mat4(c_str!("view"), view);
             shader_program.set_mat4(c_str!("proj"), proj);
 
-            gl::BindVertexArray(vao);
-
             for v in positions.iter() {
                 let model = Matrix4::from_translation(*v) *
                             Matrix4::from_angle_x(Rad(t as f32));
                 shader_program.set_mat4(c_str!("model"), model);
-                gl::DrawArrays(gl::TRIANGLES, 0, 36);
+                gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, ptr::null());
             }
         }
 
@@ -166,6 +158,15 @@ unsafe fn set_up() -> (Shader, GLuint, GLuint, GLuint) {
                             5 * mem::size_of::<GLfloat>() as GLint,
                             (3 * mem::size_of::<GLfloat>()) as *const GLvoid);
     gl::EnableVertexAttribArray(1);
+
+
+    let mut ebo = 0;
+    gl::GenBuffers(1, &mut ebo);
+    gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
+    gl::BufferData(gl::ELEMENT_ARRAY_BUFFER,
+                   mem::size_of::<[u32; 6]>() as isize,
+                   &INDICES[0] as *const u32 as *const _,
+                   gl::STATIC_DRAW);
 
 
     // texture 1
@@ -213,7 +214,7 @@ unsafe fn set_up() -> (Shader, GLuint, GLuint, GLuint) {
     shader_program.set_int(c_str!("tex1"), 0);
     shader_program.set_int(c_str!("tex2"), 1);
 
-    (shader_program, vao, texture1, texture2)
+    (shader_program, ebo, texture1, texture2)
 }
 
 fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent) {
