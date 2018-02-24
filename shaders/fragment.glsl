@@ -3,10 +3,16 @@ in vec2 o_tex;
 
 out vec4 FragColor;
 
+// TODO
+// wrong, this is per object
+uniform bool is_thing;
 uniform sampler2D tex1;
 uniform sampler2D tex2;
-uniform float t;
 
 void main() {
-    FragColor = mix(texture(tex1, o_tex), texture(tex2, o_tex), (sin(t) + 1.0)/2.0);
+    if (is_thing) {
+        FragColor = texture(tex2, o_tex);
+    } else {
+        FragColor = texture(tex1, o_tex);
+    }
 }

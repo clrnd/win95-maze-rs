@@ -1,9 +1,9 @@
 use rand;
 
-const N: u8 = 0b0001;
-const E: u8 = 0b0010;
-const S: u8 = 0b0100;
-const W: u8 = 0b1000;
+pub const N: u8 = 0b0001;
+pub const E: u8 = 0b0010;
+pub const S: u8 = 0b0100;
+pub const W: u8 = 0b1000;
 
 #[derive(Debug)]
 pub struct Maze {
@@ -36,9 +36,9 @@ impl Maze {
 
     pub fn print(&self) {
         print!(" ");
-        for _ in 0..(self.width*2 - 3) { print!("_") }
+        for _ in 0..self.width*2 - 3 { print!("_") }
         println!();
-        for i in 0..self.width-1 {
+        for i in 0..self.width - 1 {
             print!("|");
             for j in 0..self.height-1 {
                 if self.grid[i][j] & S != 0 {

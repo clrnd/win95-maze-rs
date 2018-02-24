@@ -4,7 +4,6 @@ layout (location = 1) in vec2 aTex;
 
 out vec2 o_tex;
 
-uniform float t;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 proj;
