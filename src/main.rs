@@ -8,6 +8,7 @@ mod util;
 mod shader;
 mod maze;
 mod wall;
+mod walker;
 
 use std::path::Path;
 use std::ffi::CStr;
@@ -18,9 +19,10 @@ use cgmath::prelude::*;
 use glfw::{Action, Context, Key};
 use gl::types::*;
 
-use wall::{Wall, WallRenderer, Dir, Tex};
+use wall::{Wall, WallRenderer, Kind, Tex};
 use shader::Shader;
 use maze::Maze;
+use walker::Walker;
 
 
 const WIDTH: u32 = 800;
@@ -34,9 +36,6 @@ struct Camera {
 
 
 fn main() {
-    let maze = Maze::new(20, 20);
-    maze.print();
-
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
 
     glfw.window_hint(glfw::WindowHint::ContextVersion(3, 3));
@@ -61,16 +60,21 @@ fn main() {
     // vsync
     //glfw.set_swap_interval(glfw::SwapInterval::None);
 
+    let maze = Maze::new(20, 20);
+    maze.print();
+
     let (shader_program, mut wall_renderer) = unsafe {
         (set_up_shaders(), WallRenderer::new())
     };
 
     build_walls(&maze, &mut wall_renderer);
 
+    let mut walker = Walker::new(&maze);
+
     let ratio = WIDTH as f32 / HEIGHT as f32;
 
     let mut camera = Camera {
-        pos: Point3::new(0.0, 0.0, 3.0),
+        pos: Point3::new(0.0, 0.0, 0.0),
         dir: vec3(0.0, 0.0, -1.0),
         up: vec3(0.0, 1.0, 0.0)
     };
@@ -101,6 +105,10 @@ fn main() {
             last_second = current_time;
             println!("FPS: {}", frame_count);
             frame_count = 0;
+
+            println!("direction: {:?}; (i, j) = ({}, {})",
+                     walker.direction, walker.i, walker.j);
+            walker.next();
         } else {
             frame_count += 1;
         }
@@ -126,7 +134,7 @@ fn build_walls(maze: &Maze, wall_renderer: &mut WallRenderer) {
         let tex = get_rand_tex();
         wall_renderer.add(
             Wall::new(vec3(j as f32 + 0.5, 0.0, 0.0),
-                      Dir::Horizontal, tex))
+                      Kind::Horizontal, tex))
     }
 
     // left walls
@@ -134,22 +142,22 @@ fn build_walls(maze: &Maze, wall_renderer: &mut WallRenderer) {
         let tex = get_rand_tex();
         wall_renderer.add(
             Wall::new(vec3(0.0, 0.0, i as f32 + 0.5),
-                      Dir::Vertical, tex))
+                      Kind::Vertical, tex))
     }
 
     for i in 0..maze.height-1 {
         for j in 0..maze.width-1 {
             let tex = get_rand_tex();
 
-            if maze.grid[i][j] & maze::S == 0 {
+            if maze.south(i, j) {
                 wall_renderer.add(
                     Wall::new(vec3(j as f32 + 0.5, 0.0, i as f32 + 1.0),
-                              Dir::Horizontal, tex));
+                              Kind::Horizontal, tex));
             }
-            if maze.grid[i][j] & maze::E == 0 {
+            if maze.east(i, j) {
                 wall_renderer.add(
                     Wall::new(vec3(j as f32 + 1.0, 0.0, i as f32 + 0.5),
-                              Dir::Vertical, tex));
+                              Kind::Vertical, tex));
             }
         }
     }

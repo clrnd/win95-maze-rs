@@ -1,9 +1,9 @@
 use rand;
 
-pub const N: u8 = 0b0001;
-pub const E: u8 = 0b0010;
-pub const S: u8 = 0b0100;
-pub const W: u8 = 0b1000;
+const N: u8 = 0b0001;
+const E: u8 = 0b0010;
+const S: u8 = 0b0100;
+const W: u8 = 0b1000;
 
 #[derive(Debug)]
 pub struct Maze {
@@ -59,12 +59,28 @@ impl Maze {
             println!("");
         }
     }
+
+    pub fn north(&self, i: usize, j: usize) -> bool {
+        self.grid[i][j] & N == 0
+    }
+
+    pub fn east(&self, i: usize, j: usize) -> bool {
+        self.grid[i][j] & E == 0
+    }
+
+    pub fn south(&self, i: usize, j: usize) -> bool {
+        self.grid[i][j] & S == 0
+    }
+
+    pub fn west(&self, i: usize, j: usize) -> bool {
+        self.grid[i][j] & W == 0
+    }
 }
 fn carve_from(cx: usize, cy: usize, maze: &mut Maze) {
     let mut directions: [u8; 4] = [N, E, S, W];
     directions.sort_unstable_by_key(|_| rand::random::<u8>());
 
-    for d in directions.iter() {
+    for d in &directions {
         let nx = match *d {
             N => cx,
             E => cx + 1,

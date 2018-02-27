@@ -8,6 +8,8 @@ use cgmath::{Matrix4, Deg, Rad, perspective, Vector3, vec3, One};
 
 use shader::Shader;
 
+// texture coordinates are weird because somehow
+// images are flipped on the x axis
 const VERTICES: [f32; 20] = [
      0.5, -0.5, 0.0,  0.0, 1.0, // bottom right
     -0.5, -0.5, 0.0,  1.0, 1.0, // bottom left
@@ -19,7 +21,7 @@ const INDICES: [u32; 6] = [
     1, 2, 3
 ];
 
-pub enum Dir {
+pub enum Kind {
     Vertical,
     Horizontal
 }
@@ -32,7 +34,7 @@ pub enum Tex {
 
 pub struct Wall {
     pos: Vector3<f32>,
-    dir: Dir,
+    kind: Kind,
     texture: Tex
 }
 
@@ -45,10 +47,10 @@ pub struct WallRenderer {
 }
 
 impl Wall {
-    pub fn new(pos: Vector3<f32>, dir: Dir, texture: Tex) -> Wall {
+    pub fn new(pos: Vector3<f32>, kind: Kind, texture: Tex) -> Wall {
         Wall {
             pos: pos,
-            dir: dir,
+            kind: kind,
             texture: texture
         }
     }
@@ -116,10 +118,10 @@ impl WallRenderer {
     pub unsafe fn draw(&self, shader_program: &Shader) {
 
         let draw_wall = |wall: &Wall| {
-            let model = match wall.dir {
-                Dir::Vertical =>  Matrix4::from_translation(wall.pos)
+            let model = match wall.kind {
+                Kind::Vertical =>  Matrix4::from_translation(wall.pos)
                                 * Matrix4::from_angle_y(Deg(90.0)),
-                Dir::Horizontal => Matrix4::from_translation(wall.pos)
+                Kind::Horizontal => Matrix4::from_translation(wall.pos)
             };
 
             shader_program.set_mat4(c_str!("model"), model);
