@@ -72,13 +72,13 @@ impl Shader {
         gl::Uniform1i(gl::GetUniformLocation(self.id, name.as_ptr()), value);
     }
 
-    pub unsafe fn set_bool(&self, name: &CStr, value: bool) {
-        gl::Uniform1i(gl::GetUniformLocation(self.id, name.as_ptr()), value as i32);
-    }
+    //pub unsafe fn set_bool(&self, name: &CStr, value: bool) {
+    //    gl::Uniform1i(gl::GetUniformLocation(self.id, name.as_ptr()), value as i32);
+    //}
 
-    pub unsafe fn set_float(&self, name: &CStr, value: f32) {
-        gl::Uniform1f(gl::GetUniformLocation(self.id, name.as_ptr()), value);
-    }
+    //pub unsafe fn set_float(&self, name: &CStr, value: f32) {
+    //    gl::Uniform1f(gl::GetUniformLocation(self.id, name.as_ptr()), value);
+    //}
 
     pub unsafe fn set_mat4(&self, name: &CStr, value: Matrix4<f32>) {
         gl::UniformMatrix4fv(

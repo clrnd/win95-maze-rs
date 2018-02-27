@@ -18,7 +18,7 @@ use cgmath::prelude::*;
 use glfw::{Action, Context, Key};
 use gl::types::*;
 
-use wall::*;
+use wall::{Wall, WallRenderer, Dir, Tex};
 use shader::Shader;
 use maze::Maze;
 
@@ -34,9 +34,7 @@ struct Camera {
 
 
 fn main() {
-    let maze = Maze::new(10, 10);
-    println!("{:?}", maze);
-    println!();
+    let maze = Maze::new(20, 20);
     maze.print();
 
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
@@ -60,49 +58,14 @@ fn main() {
 
     gl::load_with(|s| window.get_proc_address(s) as *const _);
 
-    let mut walls = Vec::with_capacity(maze.width * maze.height);
+    // vsync
+    //glfw.set_swap_interval(glfw::SwapInterval::None);
 
-    // top walls
-    for j in 0..maze.width-1 {
-        walls.push(
-            Wall::new(vec3(j as f32 + 0.5, 0.0, 0.0),
-                      Dir::Horizontal, Tex::Brick))
-    }
-
-    // left walls
-    for i in 0..maze.height-1 {
-        walls.push(
-            Wall::new(vec3(0.0, 0.0, i as f32 + 0.5),
-                      Dir::Vertical, Tex::Brick))
-    }
-
-    for i in 0..maze.height-1 {
-        for j in 0..maze.width-1 {
-            let tex = if rand::random() {
-                Tex::Brick
-            } else {
-                Tex::Thing
-            };
-
-            if maze.grid[i][j] & maze::S == 0 {
-                walls.push(
-                    Wall::new(vec3(j as f32 + 0.5, 0.0, i as f32 + 1.0),
-                              Dir::Horizontal, tex));
-            }
-            if maze.grid[i][j] & maze::E == 0 {
-                walls.push(
-                    Wall::new(vec3(j as f32 + 1.0, 0.0, i as f32 + 0.5),
-                              Dir::Vertical, tex));
-            }
-        }
-    }
-
-    let shader_program = unsafe {
-        for w in &mut walls {
-            w.set_up();
-        }
-        set_up()
+    let (shader_program, mut wall_renderer) = unsafe {
+        (set_up_shaders(), WallRenderer::new())
     };
+
+    build_walls(&maze, &mut wall_renderer);
 
     let ratio = WIDTH as f32 / HEIGHT as f32;
 
@@ -114,16 +77,33 @@ fn main() {
 
     let proj = perspective(Deg(45.0), ratio, 0.1, 100.0);
 
+    let mut frame_count = 0;
+    let mut last_second = glfw.get_time();
+    let mut last_frame = glfw.get_time();
+
     while !window.should_close() {
+        // input and stuff
         for (_, event) in glfw::flush_messages(&events) {
             handle_window_event(&mut window, event);
         }
 
-        let t = glfw.get_time();
+        let current_time = glfw.get_time();
+        let delta_time = current_time - last_frame;
+        last_frame = current_time;
 
-        handle_input(&window, &mut camera);
+        handle_input(&window, &mut camera, 2.0 * delta_time as f32);
+        let view = Matrix4::look_at(camera.pos,
+                                    camera.pos + camera.dir,
+                                    camera.up);
 
-        let view = Matrix4::look_at(camera.pos, camera.pos + camera.dir, camera.up);
+        // FPS counting
+        if (current_time - last_second) > 1.0 {
+            last_second = current_time;
+            println!("FPS: {}", frame_count);
+            frame_count = 0;
+        } else {
+            frame_count += 1;
+        }
 
         unsafe {
             gl::ClearColor(0.2, 0.3, 0.3, 1.0);
@@ -132,9 +112,7 @@ fn main() {
             shader_program.set_mat4(c_str!("view"), view);
             shader_program.set_mat4(c_str!("proj"), proj);
 
-            for w in walls.iter() {
-                w.draw(&shader_program);
-            }
+            wall_renderer.draw(&shader_program);
         }
 
         window.swap_buffers();
@@ -142,13 +120,58 @@ fn main() {
     }
 }
 
-unsafe fn set_up() -> Shader {
+fn build_walls(maze: &Maze, wall_renderer: &mut WallRenderer) {
+    // top walls
+    for j in 0..maze.width-1 {
+        let tex = get_rand_tex();
+        wall_renderer.add(
+            Wall::new(vec3(j as f32 + 0.5, 0.0, 0.0),
+                      Dir::Horizontal, tex))
+    }
+
+    // left walls
+    for i in 0..maze.height-1 {
+        let tex = get_rand_tex();
+        wall_renderer.add(
+            Wall::new(vec3(0.0, 0.0, i as f32 + 0.5),
+                      Dir::Vertical, tex))
+    }
+
+    for i in 0..maze.height-1 {
+        for j in 0..maze.width-1 {
+            let tex = get_rand_tex();
+
+            if maze.grid[i][j] & maze::S == 0 {
+                wall_renderer.add(
+                    Wall::new(vec3(j as f32 + 0.5, 0.0, i as f32 + 1.0),
+                              Dir::Horizontal, tex));
+            }
+            if maze.grid[i][j] & maze::E == 0 {
+                wall_renderer.add(
+                    Wall::new(vec3(j as f32 + 1.0, 0.0, i as f32 + 0.5),
+                              Dir::Vertical, tex));
+            }
+        }
+    }
+}
+
+fn get_rand_tex() -> Tex {
+    if rand::random::<f32>() < 0.95 {
+        Tex::Brick
+    } else {
+        Tex::Thing
+    }
+}
+
+unsafe fn set_up_shaders() -> Shader {
     gl::Enable(gl::DEPTH_TEST);
 
     // texture 1
     let mut texture1 = 0;
     gl::GenTextures(1, &mut texture1);
     gl::BindTexture(gl::TEXTURE_2D, texture1);
+    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
+    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
     let img = image::open(&Path::new("resources/1.bmp"))
         .expect("Failed to load texture1");
     let data = img.raw_pixels();
@@ -167,6 +190,8 @@ unsafe fn set_up() -> Shader {
     let mut texture2 = 0;
     gl::GenTextures(1, &mut texture2);
     gl::BindTexture(gl::TEXTURE_2D, texture2);
+    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
+    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
     let img = image::open(&Path::new("resources/4.bmp"))
         .expect("Failed to load texture2");
     let data = img.raw_pixels();
@@ -187,8 +212,8 @@ unsafe fn set_up() -> Shader {
                                      "shaders/fragment.glsl");
 
     shader_program.use_program();
-    shader_program.set_int(c_str!("tex1"), 0);
-    shader_program.set_int(c_str!("tex2"), 1);
+    //shader_program.set_int(c_str!("tex1"), 0);
+    //shader_program.set_int(c_str!("tex2"), 1);
 
     gl::ActiveTexture(gl::TEXTURE0);
     gl::BindTexture(gl::TEXTURE_2D, texture1);
@@ -207,30 +232,36 @@ fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent) {
     }
 }
 
-fn handle_input(window: &glfw::Window, camera: &mut Camera) {
+fn handle_input(window: &glfw::Window, camera: &mut Camera, speed: f32) {
     let right = camera.dir.cross(camera.up).normalize();
+    let turn_speed = 40.0;
+
     if window.get_key(Key::W) == Action::Press {
-        camera.pos += 0.1 * camera.dir;
+        camera.pos += speed * camera.dir;
     }
     if window.get_key(Key::S) == Action::Press {
-        camera.pos -= 0.1 * camera.dir;
+        camera.pos -= speed * camera.dir;
     }
     if window.get_key(Key::A) == Action::Press {
-        camera.pos -= 0.1 * right;
+        camera.pos -= speed * right;
     }
     if window.get_key(Key::D) == Action::Press {
-        camera.pos += 0.1 * right;
+        camera.pos += speed * right;
     }
     if window.get_key(Key::Up) == Action::Press {
-        camera.dir = Matrix3::from_axis_angle(right, Deg(2.0)) * camera.dir;
+        camera.dir = Matrix3::from_axis_angle(right, Deg(speed * turn_speed))
+                   * camera.dir;
     }
     if window.get_key(Key::Right) == Action::Press {
-        camera.dir = Matrix3::from_angle_y(Deg(-2.0)) * camera.dir;
+        camera.dir = Matrix3::from_angle_y(Deg(speed * -turn_speed))
+                   * camera.dir;
     }
     if window.get_key(Key::Down) == Action::Press {
-        camera.dir = Matrix3::from_axis_angle(right, Deg(-2.0)) * camera.dir;
+        camera.dir = Matrix3::from_axis_angle(right, Deg(speed * -turn_speed))
+                   * camera.dir;
     }
     if window.get_key(Key::Left) == Action::Press {
-        camera.dir = Matrix3::from_angle_y(Deg(2.0)) * camera.dir;
+        camera.dir = Matrix3::from_angle_y(Deg(speed * turn_speed))
+                   * camera.dir;
     }
 }

@@ -9,10 +9,10 @@ use cgmath::{Matrix4, Deg, Rad, perspective, Vector3, vec3, One};
 use shader::Shader;
 
 const VERTICES: [f32; 20] = [
-    -0.5, -0.5, 0.0,  0.0, 0.0,
-    -0.5,  0.5, 0.0,  0.0, 1.0,
-     0.5,  0.5, 0.0,  1.0, 1.0,
-     0.5, -0.5, 0.0,  1.0, 0.0
+     0.5, -0.5, 0.0,  0.0, 1.0, // bottom right
+    -0.5, -0.5, 0.0,  1.0, 1.0, // bottom left
+    -0.5,  0.5, 0.0,  1.0, 0.0, // top left
+     0.5,  0.5, 0.0,  0.0, 0.0, // top right
 ];
 const INDICES: [u32; 6] = [
     0, 1, 3,
@@ -33,9 +33,14 @@ pub enum Tex {
 pub struct Wall {
     pos: Vector3<f32>,
     dir: Dir,
-    texture: Tex,
-    vbo: GLuint,
+    texture: Tex
+}
+
+pub struct WallRenderer {
+    brick_walls: Vec<Wall>,
+    thing_walls: Vec<Wall>,
     vao: GLuint,
+    vbo: GLuint,
     ebo: GLuint
 }
 
@@ -44,38 +49,40 @@ impl Wall {
         Wall {
             pos: pos,
             dir: dir,
-            texture: texture,
-            vbo: 0,
-            vao: 0,
-            ebo: 0,
+            texture: texture
         }
     }
+}
 
-    pub unsafe fn set_up(&mut self) {
+impl WallRenderer {
 
-        /// generate VAO, VBO, EBO
-        gl::GenVertexArrays(1, &mut self.vao);
-        gl::GenBuffers(1, &mut self.vbo);
-        gl::GenBuffers(1, &mut self.ebo);
+    pub unsafe fn new() -> WallRenderer {
 
-        /// binding VAO
-        gl::BindVertexArray(self.vao);
+        let (mut vao, mut vbo, mut ebo) = (0, 0, 0);
 
-        /// VBO data
-        gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
+        //* generate VAO, VBO, EBO
+        gl::GenVertexArrays(1, &mut vao);
+        gl::GenBuffers(1, &mut vbo);
+        gl::GenBuffers(1, &mut ebo);
+
+        //* binding VAO
+        gl::BindVertexArray(vao);
+
+        //* VBO data
+        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
         gl::BufferData(gl::ARRAY_BUFFER,
                        mem::size_of::<[f32; 20]>() as isize,
                        &VERTICES[0] as *const f32 as *const _,
                        gl::STATIC_DRAW);
 
-        /// EBO data
-        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, self.ebo);
+        //* EBO data
+        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
         gl::BufferData(gl::ELEMENT_ARRAY_BUFFER,
                        mem::size_of::<[u32; 6]>() as isize,
                        &INDICES[0] as *const u32 as *const _,
                        gl::STATIC_DRAW);
 
-        /// vertex attribs
+        //* vertex attribs
         // aPos = 0
         gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE,
                                 5 * mem::size_of::<GLfloat>() as GLint,
@@ -87,28 +94,47 @@ impl Wall {
                                 (3 * mem::size_of::<GLfloat>()) as *const GLvoid);
         gl::EnableVertexAttribArray(1);
 
-        /// unbind for safeness
+        //* unbind for safeness
         gl::BindVertexArray(0);
+
+        WallRenderer {
+            brick_walls: Vec::new(),
+            thing_walls: Vec::new(),
+            vao: vao,
+            vbo: vbo,
+            ebo: ebo
+        }
+    }
+
+    pub fn add(&mut self, wall: Wall) {
+        match wall.texture {
+            Tex::Brick => self.brick_walls.push(wall),
+            Tex::Thing => self.thing_walls.push(wall),
+        }
     }
 
     pub unsafe fn draw(&self, shader_program: &Shader) {
-        let mut model = Matrix4::from_translation(self.pos);
 
-        match self.dir {
-            Dir::Vertical => {
-                model = model * Matrix4::from_angle_y(Deg(90.0));
-            },
-            _ => {}
-        };
+        let draw_wall = |wall: &Wall| {
+            let model = match wall.dir {
+                Dir::Vertical =>  Matrix4::from_translation(wall.pos)
+                                * Matrix4::from_angle_y(Deg(90.0)),
+                Dir::Horizontal => Matrix4::from_translation(wall.pos)
+            };
 
-        shader_program.set_mat4(c_str!("model"), model);
+            shader_program.set_mat4(c_str!("model"), model);
 
-        match self.texture {
-            Tex::Thing => shader_program.set_bool(c_str!("is_thing"), true),
-            _ => {}
+            gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, ptr::null());
         };
 
         gl::BindVertexArray(self.vao);
-        gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, ptr::null());
+
+        shader_program.set_int(c_str!("tex"), 0);
+        for w in &self.brick_walls { draw_wall(w) };
+
+        shader_program.set_int(c_str!("tex"), 1);
+        for w in &self.thing_walls { draw_wall(w) };
+
+        gl::BindVertexArray(0);
     }
 }
