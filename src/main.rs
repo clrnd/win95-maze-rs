@@ -9,6 +9,7 @@ mod shader;
 mod maze;
 mod wall;
 mod walker;
+mod camera;
 
 use std::path::Path;
 use std::ffi::CStr;
@@ -23,16 +24,11 @@ use wall::{Wall, WallRenderer, Kind, Tex};
 use shader::Shader;
 use maze::Maze;
 use walker::Walker;
+use camera::Camera;
 
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
-
-struct Camera {
-    pos: Point3<f32>,
-    dir: Vector3<f32>,
-    up: Vector3<f32>
-}
 
 
 fn main() {
@@ -73,11 +69,7 @@ fn main() {
 
     let ratio = WIDTH as f32 / HEIGHT as f32;
 
-    let mut camera = Camera {
-        pos: Point3::new(0.0, 0.0, 0.0),
-        dir: vec3(0.0, 0.0, -1.0),
-        up: vec3(0.0, 1.0, 0.0)
-    };
+    let mut camera = Camera::new(&walker);
 
     let proj = perspective(Deg(45.0), ratio, 0.1, 100.0);
 
@@ -85,6 +77,7 @@ fn main() {
     let mut last_second = glfw.get_time();
     let mut last_frame = glfw.get_time();
 
+    walker.next();
     while !window.should_close() {
         // input and stuff
         for (_, event) in glfw::flush_messages(&events) {
@@ -95,7 +88,11 @@ fn main() {
         let delta_time = current_time - last_frame;
         last_frame = current_time;
 
-        handle_input(&window, &mut camera, 2.0 * delta_time as f32);
+        let arrived = update_camera(&mut camera, &walker, delta_time as f32);
+        if arrived {
+            walker.next();
+        }
+
         let view = Matrix4::look_at(camera.pos,
                                     camera.pos + camera.dir,
                                     camera.up);
@@ -103,12 +100,8 @@ fn main() {
         // FPS counting
         if (current_time - last_second) > 1.0 {
             last_second = current_time;
-            println!("FPS: {}", frame_count);
+            //println!("FPS: {}", frame_count);
             frame_count = 0;
-
-            println!("direction: {:?}; (i, j) = ({}, {})",
-                     walker.direction, walker.i, walker.j);
-            walker.next();
         } else {
             frame_count += 1;
         }
@@ -125,6 +118,19 @@ fn main() {
 
         window.swap_buffers();
         glfw.poll_events();
+    }
+}
+
+fn update_camera(camera: &mut Camera, walker: &Walker, dt: f32) -> bool {
+    let v_dir = walker.direction.to_vec();
+
+    if camera.looking_at(v_dir) {
+        let v_to = vec3(walker.j as f32 + 0.5, 0.0, walker.i as f32 + 0.5);
+        //println!("camera: {:?}\ndir: {:?}\nto: {:?}", camera.pos, camera.dir, v_to);
+        camera.move_to(v_to, dt)
+    } else {
+        camera.rotate_to(v_dir, dt);
+        false
     }
 }
 

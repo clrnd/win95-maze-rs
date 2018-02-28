@@ -1,4 +1,5 @@
 use rand;
+use cgmath::{Matrix4, Matrix3, Deg, perspective, Point3, vec3, Vector3};
 
 use maze::Maze;
 
@@ -24,6 +25,15 @@ impl Direction {
             Direction::East => Direction::West,
             Direction::South => Direction::North,
             Direction::West => Direction::East
+        }
+    }
+
+    pub fn to_vec(&self) -> Vector3<f32> {
+        match *self {
+            Direction::North => vec3(0.0, 0.0, -1.0),
+            Direction::East => vec3(1.0, 0.0, 0.0),
+            Direction::South => vec3(0.0, 0.0, 1.0),
+            Direction::West => vec3(-1.0, 0.0, 0.0)
         }
     }
 }
@@ -76,6 +86,8 @@ impl<'a> Walker<'a> {
                     Direction::West => self.j -= 1
                 }
                 self.direction = *d;
+                println!("Walker: {:?}; (i, j) = ({}, {})",
+                         self.direction, self.i, self.j);
                 return;
             }
         }
