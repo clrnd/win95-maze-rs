@@ -1,11 +1,13 @@
 use std::mem;
 use std::ptr;
+use std::collections::HashMap;
 use std::ffi::CStr;
 
 use gl;
 use gl::types::*;
-use cgmath::{Matrix4, Deg, Vector3};
+use cgmath::{Matrix4, Deg, Vector3, One};
 
+use texture::Texture;
 use shader::Shader;
 
 // texture coordinates are weird because somehow
@@ -21,44 +23,50 @@ const INDICES: [u32; 6] = [
     1, 2, 3
 ];
 
-pub enum Kind {
-    Vertical,
-    Horizontal
-}
-
-#[derive(Copy, Clone)]
-pub enum Tex {
+#[derive(Hash, PartialEq, Eq, Debug)]
+pub enum TexType {
     Brick,
-    Thing
+    Thing,
+    Ceiling,
+    Floor
 }
 
+#[derive(Debug)]
 pub struct Wall {
-    pos: Vector3<f32>,
-    kind: Kind,
-    texture: Tex
+    pub pos: Vector3<f32>,
+    pub rotate_y: f32,
+    pub rotate_x: f32,
+    pub texture: TexType
 }
 
+#[derive(Debug)]
 pub struct WallRenderer {
+    textures: HashMap<TexType, Texture>,
     brick_walls: Vec<Wall>,
     thing_walls: Vec<Wall>,
+    others: Vec<Wall>,
     vao: GLuint,
-    vbo: GLuint,
-    ebo: GLuint
+    //vbo: GLuint,
+    //ebo: GLuint
 }
 
-impl Wall {
-    pub fn new(pos: Vector3<f32>, kind: Kind, texture: Tex) -> Wall {
-        Wall {
-            pos: pos,
-            kind: kind,
-            texture: texture
-        }
-    }
-}
+//impl Wall {
+//    pub fn new(pos: Vector3<f32>,
+//               scale: Vector3<f32>,
+//               rotate: Vector3<f32>,
+//               texture: TexType) -> Wall {
+//        Wall {
+//            pos: pos,
+//            scale: scale,
+//            rotate: rotate,
+//            texture: texture
+//        }
+//    }
+//}
 
 impl WallRenderer {
 
-    pub unsafe fn new() -> WallRenderer {
+    pub unsafe fn new(textures: HashMap<TexType, Texture>) -> WallRenderer {
 
         let (mut vao, mut vbo, mut ebo) = (0, 0, 0);
 
@@ -100,29 +108,30 @@ impl WallRenderer {
         gl::BindVertexArray(0);
 
         WallRenderer {
+            textures: textures,
             brick_walls: Vec::new(),
             thing_walls: Vec::new(),
-            vao: vao,
-            vbo: vbo,
-            ebo: ebo
+            others: Vec::new(),
+            vao: vao
+            //vbo: vbo,
+            //ebo: ebo
         }
     }
 
     pub fn add(&mut self, wall: Wall) {
         match wall.texture {
-            Tex::Brick => self.brick_walls.push(wall),
-            Tex::Thing => self.thing_walls.push(wall),
+            TexType::Brick => self.brick_walls.push(wall),
+            TexType::Thing => self.thing_walls.push(wall),
+            _ => self.others.push(wall)
         }
     }
 
     pub unsafe fn draw(&self, shader_program: &Shader) {
 
         let draw_wall = |wall: &Wall| {
-            let model = match wall.kind {
-                Kind::Vertical =>  Matrix4::from_translation(wall.pos)
-                                * Matrix4::from_angle_y(Deg(90.0)),
-                Kind::Horizontal => Matrix4::from_translation(wall.pos)
-            };
+            let model = Matrix4::from_translation(wall.pos) *
+                        Matrix4::from_angle_y(Deg(wall.rotate_y)) *
+                        Matrix4::from_angle_x(Deg(wall.rotate_x));
 
             shader_program.set_mat4(c_str!("model"), model);
 
@@ -131,11 +140,19 @@ impl WallRenderer {
 
         gl::BindVertexArray(self.vao);
 
-        shader_program.set_int(c_str!("tex"), 0);
-        for w in &self.brick_walls { draw_wall(w) };
+        shader_program.set_int(c_str!("tex"),
+                               self.textures[&TexType::Brick].number as i32);
+        for w in &self.brick_walls { draw_wall(w) }
 
-        shader_program.set_int(c_str!("tex"), 1);
-        for w in &self.thing_walls { draw_wall(w) };
+        shader_program.set_int(c_str!("tex"),
+                               self.textures[&TexType::Thing].number as i32);
+        for w in &self.thing_walls { draw_wall(w) }
+
+        for w in &self.others {
+            shader_program.set_int(c_str!("tex"),
+                               self.textures[&w.texture].number as i32);
+            draw_wall(w)
+        }
 
         gl::BindVertexArray(0);
     }

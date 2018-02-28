@@ -10,20 +10,22 @@ mod maze;
 mod wall;
 mod walker;
 mod camera;
+mod texture;
 
-use std::path::Path;
 use std::ffi::CStr;
+use std::collections::HashMap;
 
 use image::GenericImage;
-use cgmath::{Matrix4, Deg, perspective, Point3, vec3};
+use cgmath::{Matrix3, Matrix4, Deg, perspective, Point3, vec3, InnerSpace};
 use glfw::{Action, Context, Key};
 use gl::types::*;
 
-use wall::{Wall, WallRenderer, Kind, Tex};
+use wall::{Wall, WallRenderer, TexType};
 use shader::Shader;
 use maze::Maze;
 use walker::Walker;
 use camera::Camera;
+use texture::Texture;
 
 
 const WIDTH: u32 = 800;
@@ -58,8 +60,12 @@ fn main() {
     let maze = Maze::new(20, 20);
     maze.print();
 
-    let (shader_program, mut wall_renderer) = unsafe {
-        (set_up_shaders(), WallRenderer::new())
+    let (shader_program, textures) = unsafe {
+        set_up_shaders()
+    };
+
+    let mut wall_renderer = unsafe {
+        WallRenderer::new(textures)
     };
 
     build_walls(&maze, &mut wall_renderer);
@@ -70,7 +76,7 @@ fn main() {
 
     let mut camera = Camera::new(&walker);
 
-    let proj = perspective(Deg(45.0), ratio, 0.1, 100.0);
+    let proj = perspective(Deg(50.0), ratio, 0.1, 100.0);
 
     let mut frame_count = 0;
     let mut last_second = glfw.get_time();
@@ -91,6 +97,7 @@ fn main() {
         if arrived {
             walker.next();
         }
+        //handle_input(&window, &mut camera, delta_time as f32 * 3.0);
 
         let view = Matrix4::look_at(camera.pos,
                                     camera.pos + camera.dir,
@@ -135,106 +142,109 @@ fn update_camera(camera: &mut Camera, walker: &Walker, dt: f32) -> bool {
 }
 
 fn build_walls(maze: &Maze, wall_renderer: &mut WallRenderer) {
-    // top walls
+
+    // north walls
     for j in 0..maze.width-1 {
         let tex = get_rand_tex();
         wall_renderer.add(
-            Wall::new(vec3(j as f32 + 0.5, 0.0, 0.0),
-                      Kind::Horizontal, tex))
+            Wall {
+                pos: vec3(j as f32 + 0.5, 0.0, 0.0),
+                rotate_y: 0.0,
+                rotate_x: 0.0,
+                texture: tex
+            })
     }
 
-    // left walls
+    // west walls
     for i in 0..maze.height-1 {
         let tex = get_rand_tex();
         wall_renderer.add(
-            Wall::new(vec3(0.0, 0.0, i as f32 + 0.5),
-                      Kind::Vertical, tex))
+            Wall {
+                pos: vec3(0.0, 0.0, i as f32 + 0.5),
+                rotate_y: 90.0,
+                rotate_x: 0.0,
+                texture: tex
+            })
     }
 
+    // inner walls but only east or south
     for i in 0..maze.height-1 {
         for j in 0..maze.width-1 {
-            let tex = get_rand_tex();
 
+            // south wall
             if maze.south(i, j) {
+                let tex = get_rand_tex();
                 wall_renderer.add(
-                    Wall::new(vec3(j as f32 + 0.5, 0.0, i as f32 + 1.0),
-                              Kind::Horizontal, tex));
+                    Wall {
+                        pos: vec3(j as f32 + 0.5, 0.0, i as f32 + 1.0),
+                        rotate_y: 0.0,
+                        rotate_x: 0.0,
+                        texture: tex
+                    })
             }
+
+            // east wall
             if maze.east(i, j) {
+                let tex = get_rand_tex();
                 wall_renderer.add(
-                    Wall::new(vec3(j as f32 + 1.0, 0.0, i as f32 + 0.5),
-                              Kind::Vertical, tex));
+                    Wall {
+                        pos: vec3(j as f32 + 1.0, 0.0, i as f32 + 0.5),
+                        rotate_y: 90.0,
+                        rotate_x: 0.0,
+                        texture: tex
+                    })
             }
+
+            // ceiling wall
+            wall_renderer.add(
+                Wall {
+                    pos: vec3(j as f32 + 0.5, 0.5, i as f32 + 0.5),
+                    rotate_y: 0.0,
+                    rotate_x: 90.0,
+                    texture: TexType::Ceiling
+                });
+
+            // floor wall
+            wall_renderer.add(
+                Wall {
+                    pos: vec3(j as f32 + 0.5, -0.5, i as f32 + 0.5),
+                    rotate_y: 0.0,
+                    rotate_x: 90.0,
+                    texture: TexType::Floor
+                });
         }
     }
 }
 
-fn get_rand_tex() -> Tex {
-    if rand::random::<f32>() < 0.95 {
-        Tex::Brick
+fn get_rand_tex() -> TexType {
+    if rand::random::<f32>() < 0.9 {
+        TexType::Brick
     } else {
-        Tex::Thing
+        TexType::Thing
     }
 }
 
-unsafe fn set_up_shaders() -> Shader {
+unsafe fn set_up_shaders() -> (Shader, HashMap<TexType, Texture>) {
     gl::Enable(gl::DEPTH_TEST);
 
-    // texture 1
-    let mut texture1 = 0;
-    gl::GenTextures(1, &mut texture1);
-    gl::BindTexture(gl::TEXTURE_2D, texture1);
-    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
-    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
-    let img = image::open(&Path::new("resources/1.bmp"))
-        .expect("Failed to load texture1");
-    let data = img.raw_pixels();
-    gl::TexImage2D(gl::TEXTURE_2D,
-                   0,
-                   gl::RGB as i32,
-                   img.width() as i32,
-                   img.height() as i32,
-                   0,
-                   gl::RGB,
-                   gl::UNSIGNED_BYTE,
-                   &data[0] as *const u8 as *const GLvoid);
-    gl::GenerateMipmap(gl::TEXTURE_2D);
-
-    // texture 2
-    let mut texture2 = 0;
-    gl::GenTextures(1, &mut texture2);
-    gl::BindTexture(gl::TEXTURE_2D, texture2);
-    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
-    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
-    let img = image::open(&Path::new("resources/4.bmp"))
-        .expect("Failed to load texture2");
-    let data = img.raw_pixels();
-    gl::TexImage2D(gl::TEXTURE_2D,
-                   0,
-                   gl::RGB as i32,
-                   img.width() as i32,
-                   img.height() as i32,
-                   0,
-                   gl::RGB,
-                   gl::UNSIGNED_BYTE,
-                   &data[0] as *const u8 as *const GLvoid);
-    gl::GenerateMipmap(gl::TEXTURE_2D);
-
+    // textures
+    let mut textures = HashMap::new();
+    textures.insert(TexType::Brick, Texture::new("resources/brick.bmp", 0));
+    textures.insert(TexType::Thing, Texture::new("resources/thing.bmp", 1));
+    textures.insert(TexType::Ceiling, Texture::new("resources/ceiling.bmp", 2));
+    textures.insert(TexType::Floor, Texture::new("resources/floor.bmp", 3));
 
     // shaders
     let shader_program = Shader::new("shaders/vertex.glsl",
                                      "shaders/fragment.glsl");
 
     shader_program.use_program();
-    //shader_program.set_int(c_str!("tex1"), 0);
-    //shader_program.set_int(c_str!("tex2"), 1);
 
-    gl::ActiveTexture(gl::TEXTURE0);
-    gl::BindTexture(gl::TEXTURE_2D, texture1);
-    gl::ActiveTexture(gl::TEXTURE1);
-    gl::BindTexture(gl::TEXTURE_2D, texture2);
+    for (_, texture) in &textures {
+        texture.bind();
+    }
 
-    shader_program
+    (shader_program, textures)
 }
 
 fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent) {
@@ -246,36 +256,36 @@ fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent) {
     }
 }
 
-//fn handle_input(window: &glfw::Window, camera: &mut Camera, speed: f32) {
-//    let right = camera.dir.cross(camera.up).normalize();
-//    let turn_speed = 40.0;
-//
-//    if window.get_key(Key::W) == Action::Press {
-//        camera.pos += speed * camera.dir;
-//    }
-//    if window.get_key(Key::S) == Action::Press {
-//        camera.pos -= speed * camera.dir;
-//    }
-//    if window.get_key(Key::A) == Action::Press {
-//        camera.pos -= speed * right;
-//    }
-//    if window.get_key(Key::D) == Action::Press {
-//        camera.pos += speed * right;
-//    }
-//    if window.get_key(Key::Up) == Action::Press {
-//        camera.dir = Matrix3::from_axis_angle(right, Deg(speed * turn_speed))
-//                   * camera.dir;
-//    }
-//    if window.get_key(Key::Right) == Action::Press {
-//        camera.dir = Matrix3::from_angle_y(Deg(speed * -turn_speed))
-//                   * camera.dir;
-//    }
-//    if window.get_key(Key::Down) == Action::Press {
-//        camera.dir = Matrix3::from_axis_angle(right, Deg(speed * -turn_speed))
-//                   * camera.dir;
-//    }
-//    if window.get_key(Key::Left) == Action::Press {
-//        camera.dir = Matrix3::from_angle_y(Deg(speed * turn_speed))
-//                   * camera.dir;
-//    }
-//}
+fn handle_input(window: &glfw::Window, camera: &mut Camera, speed: f32) {
+    let right = camera.dir.cross(camera.up).normalize();
+    let turn_speed = 60.0;
+
+    if window.get_key(Key::W) == Action::Press {
+        camera.pos += speed * camera.dir;
+    }
+    if window.get_key(Key::S) == Action::Press {
+        camera.pos -= speed * camera.dir;
+    }
+    if window.get_key(Key::A) == Action::Press {
+        camera.pos -= speed * right;
+    }
+    if window.get_key(Key::D) == Action::Press {
+        camera.pos += speed * right;
+    }
+    if window.get_key(Key::Up) == Action::Press {
+        camera.dir = Matrix3::from_axis_angle(right, Deg(speed * turn_speed))
+                   * camera.dir;
+    }
+    if window.get_key(Key::Right) == Action::Press {
+        camera.dir = Matrix3::from_angle_y(Deg(speed * -turn_speed))
+                   * camera.dir;
+    }
+    if window.get_key(Key::Down) == Action::Press {
+        camera.dir = Matrix3::from_axis_angle(right, Deg(speed * -turn_speed))
+                   * camera.dir;
+    }
+    if window.get_key(Key::Left) == Action::Press {
+        camera.dir = Matrix3::from_angle_y(Deg(speed * turn_speed))
+                   * camera.dir;
+    }
+}
