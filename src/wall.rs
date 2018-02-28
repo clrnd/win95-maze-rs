@@ -4,7 +4,7 @@ use std::ffi::CStr;
 
 use gl;
 use gl::types::*;
-use cgmath::{Matrix4, Deg, Rad, perspective, Vector3, vec3, One};
+use cgmath::{Matrix4, Deg, Vector3};
 
 use shader::Shader;
 

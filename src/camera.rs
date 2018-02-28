@@ -1,5 +1,5 @@
-use cgmath::{Matrix3, InnerSpace, Point3, vec3, Vector3,
-             Rad, EuclideanSpace, MetricSpace};
+use cgmath::prelude::*;
+use cgmath::{Matrix3, Point3, vec3, Vector3, Rad};
 use walker::Walker;
 
 const MOVE_SPEED: f32 = 3.0;
@@ -28,16 +28,26 @@ impl Camera {
         let sign = if self.dir.cross(v_dir).y > 0.0 { 1.0 } else { -1.0 };
         self.dir = Matrix3::from_angle_y(Rad(dt * sign * TURN_SPEED)) * self.dir;
 
-        // if the rotation went trough the objective, just assign it
+        // if the rotation went through the objective, just assign it
         let new_sign = if self.dir.cross(v_dir).y > 0.0 { 1.0 } else { -1.0 };
         if (sign * new_sign) < 0.0 {
             self.dir = v_dir;
         }
     }
 
-    pub fn move_to(&mut self, v_to: Vector3<f32>, dt: f32) -> bool {
+    pub fn move_to(&mut self, p_to: Point3<f32>, dt: f32) -> bool {
+        let old_dir = (p_to - self.pos).normalize();
+
         self.pos += MOVE_SPEED * dt * self.dir;
 
-        self.pos.to_vec().distance(v_to) < 0.1
+        // if new_dir is opposite direction from old_dir
+        // then we went through, just assign it
+        let new_dir = (p_to - self.pos).normalize();
+        if old_dir.distance(new_dir) < 0.5 {
+            false
+        } else {
+            self.pos = p_to;
+            true
+        }
     }
 }

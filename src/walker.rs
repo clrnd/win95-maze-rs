@@ -1,5 +1,5 @@
 use rand;
-use cgmath::{Matrix4, Matrix3, Deg, perspective, Point3, vec3, Vector3};
+use cgmath::{vec3, Vector3};
 
 use maze::Maze;
 

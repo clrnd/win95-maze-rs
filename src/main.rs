@@ -15,8 +15,7 @@ use std::path::Path;
 use std::ffi::CStr;
 
 use image::GenericImage;
-use cgmath::{Matrix4, Matrix3, Deg, perspective, Point3, vec3, Vector3};
-use cgmath::prelude::*;
+use cgmath::{Matrix4, Deg, perspective, Point3, vec3};
 use glfw::{Action, Context, Key};
 use gl::types::*;
 
@@ -100,7 +99,7 @@ fn main() {
         // FPS counting
         if (current_time - last_second) > 1.0 {
             last_second = current_time;
-            //println!("FPS: {}", frame_count);
+            println!("FPS: {}", frame_count);
             frame_count = 0;
         } else {
             frame_count += 1;
@@ -125,9 +124,10 @@ fn update_camera(camera: &mut Camera, walker: &Walker, dt: f32) -> bool {
     let v_dir = walker.direction.to_vec();
 
     if camera.looking_at(v_dir) {
-        let v_to = vec3(walker.j as f32 + 0.5, 0.0, walker.i as f32 + 0.5);
-        //println!("camera: {:?}\ndir: {:?}\nto: {:?}", camera.pos, camera.dir, v_to);
-        camera.move_to(v_to, dt)
+        let p_to = Point3::new(walker.j as f32 + 0.5,
+                               0.0,
+                               walker.i as f32 + 0.5);
+        camera.move_to(p_to, dt)
     } else {
         camera.rotate_to(v_dir, dt);
         false
@@ -246,36 +246,36 @@ fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent) {
     }
 }
 
-fn handle_input(window: &glfw::Window, camera: &mut Camera, speed: f32) {
-    let right = camera.dir.cross(camera.up).normalize();
-    let turn_speed = 40.0;
-
-    if window.get_key(Key::W) == Action::Press {
-        camera.pos += speed * camera.dir;
-    }
-    if window.get_key(Key::S) == Action::Press {
-        camera.pos -= speed * camera.dir;
-    }
-    if window.get_key(Key::A) == Action::Press {
-        camera.pos -= speed * right;
-    }
-    if window.get_key(Key::D) == Action::Press {
-        camera.pos += speed * right;
-    }
-    if window.get_key(Key::Up) == Action::Press {
-        camera.dir = Matrix3::from_axis_angle(right, Deg(speed * turn_speed))
-                   * camera.dir;
-    }
-    if window.get_key(Key::Right) == Action::Press {
-        camera.dir = Matrix3::from_angle_y(Deg(speed * -turn_speed))
-                   * camera.dir;
-    }
-    if window.get_key(Key::Down) == Action::Press {
-        camera.dir = Matrix3::from_axis_angle(right, Deg(speed * -turn_speed))
-                   * camera.dir;
-    }
-    if window.get_key(Key::Left) == Action::Press {
-        camera.dir = Matrix3::from_angle_y(Deg(speed * turn_speed))
-                   * camera.dir;
-    }
-}
+//fn handle_input(window: &glfw::Window, camera: &mut Camera, speed: f32) {
+//    let right = camera.dir.cross(camera.up).normalize();
+//    let turn_speed = 40.0;
+//
+//    if window.get_key(Key::W) == Action::Press {
+//        camera.pos += speed * camera.dir;
+//    }
+//    if window.get_key(Key::S) == Action::Press {
+//        camera.pos -= speed * camera.dir;
+//    }
+//    if window.get_key(Key::A) == Action::Press {
+//        camera.pos -= speed * right;
+//    }
+//    if window.get_key(Key::D) == Action::Press {
+//        camera.pos += speed * right;
+//    }
+//    if window.get_key(Key::Up) == Action::Press {
+//        camera.dir = Matrix3::from_axis_angle(right, Deg(speed * turn_speed))
+//                   * camera.dir;
+//    }
+//    if window.get_key(Key::Right) == Action::Press {
+//        camera.dir = Matrix3::from_angle_y(Deg(speed * -turn_speed))
+//                   * camera.dir;
+//    }
+//    if window.get_key(Key::Down) == Action::Press {
+//        camera.dir = Matrix3::from_axis_angle(right, Deg(speed * -turn_speed))
+//                   * camera.dir;
+//    }
+//    if window.get_key(Key::Left) == Action::Press {
+//        camera.dir = Matrix3::from_angle_y(Deg(speed * turn_speed))
+//                   * camera.dir;
+//    }
+//}
