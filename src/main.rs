@@ -18,7 +18,6 @@ use std::collections::HashMap;
 use image::GenericImage;
 use cgmath::{Matrix3, Matrix4, Deg, perspective, Point3, vec3, InnerSpace};
 use glfw::{Action, Context, Key};
-use gl::types::*;
 
 use wall::{Wall, WallRenderer, TexType};
 use shader::Shader;

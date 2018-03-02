@@ -34,6 +34,7 @@ impl Camera {
 
     pub fn rotate_to(&mut self, v_dir: Vector3<f32>, dt: f32) {
         let sign = Camera::rotation_sign(&self.dir, &v_dir);
+
         self.dir = Matrix3::from_angle_y(Rad(dt * sign * TURN_SPEED)) * self.dir;
 
         // if the rotation went through the objective, just assign it

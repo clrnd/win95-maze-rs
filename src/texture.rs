@@ -14,13 +14,15 @@ pub struct Texture {
 impl Texture {
     pub unsafe fn new(name: &str, number: u32) -> Texture {
         let mut id = 0;
+
+        let img = image::open(&Path::new(name))
+            .expect("Failed to load texture.");
+        let data = img.raw_pixels();
+
         gl::GenTextures(1, &mut id);
         gl::BindTexture(gl::TEXTURE_2D, id);
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
-        let img = image::open(&Path::new(name))
-            .expect("Failed to load texture.");
-        let data = img.raw_pixels();
         gl::TexImage2D(gl::TEXTURE_2D,
                        0,
                        gl::RGB as i32,

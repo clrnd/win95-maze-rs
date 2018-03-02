@@ -5,7 +5,7 @@ use std::ffi::CStr;
 
 use gl;
 use gl::types::*;
-use cgmath::{Matrix4, Deg, Vector3, One};
+use cgmath::{Matrix4, Deg, Vector3};
 
 use texture::Texture;
 use shader::Shader;
@@ -83,14 +83,14 @@ impl WallRenderer {
         gl::BufferData(gl::ARRAY_BUFFER,
                        mem::size_of::<[f32; 20]>() as isize,
                        &VERTICES[0] as *const f32 as *const _,
-                       gl::STATIC_DRAW);
+                       gl::DYNAMIC_DRAW);
 
         //* EBO data
         gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
         gl::BufferData(gl::ELEMENT_ARRAY_BUFFER,
                        mem::size_of::<[u32; 6]>() as isize,
                        &INDICES[0] as *const u32 as *const _,
-                       gl::STATIC_DRAW);
+                       gl::DYNAMIC_DRAW);
 
         //* vertex attribs
         // aPos = 0
@@ -126,6 +126,15 @@ impl WallRenderer {
         }
     }
 
+    unsafe fn modify_vbo(value: f32, idxs: &[usize]) {
+        for i in idxs {
+            gl::BufferSubData(gl::ARRAY_BUFFER,
+                              (i * mem::size_of::<GLfloat>()) as GLintptr,
+                              mem::size_of::<GLfloat>() as isize,
+                              &value as *const f32 as *const _);
+        }
+    }
+
     pub unsafe fn draw(&self, shader_program: &Shader) {
 
         let draw_wall = |wall: &Wall| {
@@ -140,6 +149,9 @@ impl WallRenderer {
 
         gl::BindVertexArray(self.vao);
 
+        // Set texture coordinates of VBO
+        WallRenderer::modify_vbo(1.0, &[4, 8, 9, 13]);
+
         shader_program.set_int(c_str!("tex"),
                                self.textures[&TexType::Brick].number as i32);
         for w in &self.brick_walls { draw_wall(w) }
@@ -148,6 +160,7 @@ impl WallRenderer {
                                self.textures[&TexType::Thing].number as i32);
         for w in &self.thing_walls { draw_wall(w) }
 
+        WallRenderer::modify_vbo(4.0, &[4, 8, 9, 13]);
         for w in &self.others {
             shader_program.set_int(c_str!("tex"),
                                self.textures[&w.texture].number as i32);
