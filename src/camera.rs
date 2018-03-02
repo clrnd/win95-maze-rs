@@ -2,8 +2,8 @@ use cgmath::prelude::*;
 use cgmath::{Matrix3, Point3, vec3, Vector3, Rad};
 use walker::Walker;
 
-const MOVE_SPEED: f32 = 3.0;
-const TURN_SPEED: f32 = 3.5;
+const MOVE_SPEED: f32 = 2.0;
+const TURN_SPEED: f32 = 2.5;
 
 pub struct Camera {
     pub pos: Point3<f32>,

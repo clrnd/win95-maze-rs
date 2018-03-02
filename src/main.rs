@@ -15,7 +15,6 @@ mod texture;
 use std::ffi::CStr;
 use std::collections::HashMap;
 
-use image::GenericImage;
 use cgmath::{Matrix3, Matrix4, Deg, perspective, Point3, vec3, InnerSpace};
 use glfw::{Action, Context, Key};
 
@@ -75,7 +74,7 @@ fn main() {
 
     let mut camera = Camera::new(&walker);
 
-    let proj = perspective(Deg(50.0), ratio, 0.1, 100.0);
+    let proj = perspective(Deg(60.0), ratio, 0.1, 100.0);
 
     let mut frame_count = 0;
     let mut last_second = glfw.get_time();
