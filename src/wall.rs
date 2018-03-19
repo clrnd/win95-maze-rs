@@ -45,7 +45,8 @@ pub struct WallRenderer {
     brick_walls: Vec<Wall>,
     thing_walls: Vec<Wall>,
     others: Vec<Wall>,
-    vao: GLuint
+    vao: GLuint,
+    vbo: GLuint
 }
 
 impl WallRenderer {
@@ -88,15 +89,13 @@ impl WallRenderer {
                                 (3 * mem::size_of::<GLfloat>()) as *const GLvoid);
         gl::EnableVertexAttribArray(1);
 
-        //* unbind for safeness
-        gl::BindVertexArray(0);
-
         WallRenderer {
             textures: textures,
             brick_walls: Vec::new(),
             thing_walls: Vec::new(),
             others: Vec::new(),
-            vao: vao
+            vao: vao,
+            vbo: vbo
         }
     }
 
@@ -130,6 +129,7 @@ impl WallRenderer {
         };
 
         gl::BindVertexArray(self.vao);
+        gl::BindBuffer(gl::ARRAY_BUFFER, self.vao);
         shader_program.set_bool(c_str!("solid"), false);
 
         // Set texture coordinates of VBO
@@ -149,7 +149,5 @@ impl WallRenderer {
                                self.textures[&w.texture].number as i32);
             draw_wall(w)
         }
-
-        gl::BindVertexArray(0);
     }
 }

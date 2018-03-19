@@ -71,7 +71,7 @@ fn main() {
     build_walls(&maze, &mut wall_renderer);
 
     let mut ico_renderer = unsafe { IcoRenderer::new() };
-    ico_renderer.add( Ico { pos: vec3(1.0, 1.0, 1.0) });
+    ico_renderer.add( Ico { pos: vec3(0.5, 0.0, 1.5) });
 
     let mut walker = Walker::new(&maze);
 
@@ -93,14 +93,14 @@ fn main() {
         }
 
         let current_time = glfw.get_time();
-        let delta_time = current_time - last_frame;
+        let delta_time = (current_time - last_frame) as f32;
         last_frame = current_time;
 
-        //let arrived = update_camera(&mut camera, &walker, delta_time as f32);
+        //let arrived = update_camera(&mut camera, &walker, delta_time);
         //if arrived {
         //    walker.next();
         //}
-        handle_input(&window, &mut camera, delta_time as f32 * 3.0);
+        handle_input(&window, &mut camera, delta_time * 3.0);
 
         let view = Matrix4::look_at(camera.pos,
                                     camera.pos + camera.dir,
@@ -122,9 +122,8 @@ fn main() {
             shader_program.set_mat4(c_str!("view"), view);
             shader_program.set_mat4(c_str!("proj"), proj);
 
-            //wall_renderer.draw(&shader_program);
-
-            ico_renderer.draw(&shader_program);
+            wall_renderer.draw(&shader_program);
+            ico_renderer.draw(&shader_program, current_time as f32);
         }
 
         window.swap_buffers();
@@ -231,6 +230,7 @@ fn get_rand_tex() -> TexType {
 
 unsafe fn set_up_shaders() -> (Shader, HashMap<TexType, Texture>) {
     gl::Enable(gl::DEPTH_TEST);
+    //gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
 
     // textures
     let mut textures = HashMap::new();
