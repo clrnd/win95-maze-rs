@@ -5,6 +5,7 @@ extern crate cgmath;
 extern crate rand;
 
 mod util;
+mod ico;
 mod shader;
 mod maze;
 mod wall;
@@ -19,6 +20,7 @@ use cgmath::{Matrix3, Matrix4, Deg, perspective, Point3, vec3, InnerSpace};
 use glfw::{Action, Context, Key};
 
 use wall::{Wall, WallRenderer, TexType};
+use ico::{Ico, IcoRenderer};
 use shader::Shader;
 use maze::Maze;
 use walker::Walker;
@@ -68,6 +70,9 @@ fn main() {
 
     build_walls(&maze, &mut wall_renderer);
 
+    let mut ico_renderer = unsafe { IcoRenderer::new() };
+    ico_renderer.add( Ico { pos: vec3(1.0, 1.0, 1.0) });
+
     let mut walker = Walker::new(&maze);
 
     let ratio = WIDTH as f32 / HEIGHT as f32;
@@ -91,11 +96,11 @@ fn main() {
         let delta_time = current_time - last_frame;
         last_frame = current_time;
 
-        let arrived = update_camera(&mut camera, &walker, delta_time as f32);
-        if arrived {
-            walker.next();
-        }
-        //handle_input(&window, &mut camera, delta_time as f32 * 3.0);
+        //let arrived = update_camera(&mut camera, &walker, delta_time as f32);
+        //if arrived {
+        //    walker.next();
+        //}
+        handle_input(&window, &mut camera, delta_time as f32 * 3.0);
 
         let view = Matrix4::look_at(camera.pos,
                                     camera.pos + camera.dir,
@@ -117,7 +122,9 @@ fn main() {
             shader_program.set_mat4(c_str!("view"), view);
             shader_program.set_mat4(c_str!("proj"), proj);
 
-            wall_renderer.draw(&shader_program);
+            //wall_renderer.draw(&shader_program);
+
+            ico_renderer.draw(&shader_program);
         }
 
         window.swap_buffers();
@@ -237,6 +244,7 @@ unsafe fn set_up_shaders() -> (Shader, HashMap<TexType, Texture>) {
                                      "shaders/fragment.glsl");
 
     shader_program.use_program();
+    shader_program.set_vec3(c_str!("color"), vec3(1.0, 0.0, 0.5));
 
     for (_, texture) in &textures {
         texture.bind();

@@ -45,24 +45,8 @@ pub struct WallRenderer {
     brick_walls: Vec<Wall>,
     thing_walls: Vec<Wall>,
     others: Vec<Wall>,
-    vao: GLuint,
-    //vbo: GLuint,
-    //ebo: GLuint
+    vao: GLuint
 }
-
-//impl Wall {
-//    pub fn new(pos: Vector3<f32>,
-//               scale: Vector3<f32>,
-//               rotate: Vector3<f32>,
-//               texture: TexType) -> Wall {
-//        Wall {
-//            pos: pos,
-//            scale: scale,
-//            rotate: rotate,
-//            texture: texture
-//        }
-//    }
-//}
 
 impl WallRenderer {
 
@@ -113,8 +97,6 @@ impl WallRenderer {
             thing_walls: Vec::new(),
             others: Vec::new(),
             vao: vao
-            //vbo: vbo,
-            //ebo: ebo
         }
     }
 
@@ -148,6 +130,7 @@ impl WallRenderer {
         };
 
         gl::BindVertexArray(self.vao);
+        shader_program.set_bool(c_str!("solid"), false);
 
         // Set texture coordinates of VBO
         WallRenderer::modify_vbo(1.0, &[4, 8, 9, 13]);
