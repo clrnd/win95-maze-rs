@@ -101,19 +101,22 @@ impl Shader {
     unsafe fn check_compile_errors(&self, shader: u32, type_: &str) {
         let mut success = gl::FALSE as GLint;
         let mut info_log = Vec::with_capacity(1024);
+        let mut length = 0;
         info_log.set_len(1024 - 1); // subtract 1 to skip the trailing null character
+
         if type_ != "PROGRAM" {
             gl::GetShaderiv(shader, gl::COMPILE_STATUS, &mut success);
             if success != gl::TRUE as GLint {
                 gl::GetShaderInfoLog(
                     shader,
                     1024,
-                    ptr::null_mut(),
+                    &mut length,
                     info_log.as_mut_ptr() as *mut GLchar,
                 );
+                info_log.truncate(length as usize);
                 println!(
                     "ERROR::SHADER_COMPILATION_ERROR of type: {}\n{}\n \
-                     -- --------------------------------------------------- -- ",
+                     ---------------------------------------------------",
                     type_,
                     str::from_utf8(&info_log).unwrap()
                 );
@@ -124,9 +127,10 @@ impl Shader {
                 gl::GetProgramInfoLog(
                     shader,
                     1024,
-                    ptr::null_mut(),
+                    &mut length,
                     info_log.as_mut_ptr() as *mut GLchar,
                 );
+                info_log.truncate(length as usize);
                 println!(
                     "ERROR::PROGRAM_LINKING_ERROR of type: {}\n{}\n \
                      -- --------------------------------------------------- -- ",
