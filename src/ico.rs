@@ -73,7 +73,8 @@ const VERTICES: [f32; 360] = [
 
 #[derive(Debug)]
 pub struct Ico {
-    pub pos: Vector3<f32>
+    pub pos: Vector3<f32>,
+    pub axis: Vector3<f32>
 }
 
 #[derive(Debug)]
@@ -132,8 +133,8 @@ impl IcoRenderer {
 
         for w in &self.icos {
             let model = Matrix4::from_translation(w.pos) *
-                        Matrix4::from_angle_y(Deg(t * 100.0)) *
-                        Matrix4::from_scale(0.3);
+                        Matrix4::from_axis_angle(w.axis, Deg(t * 100.0)) *
+                        Matrix4::from_scale(0.25);
             shader_program.set_mat4(c_str!("model"), model);
             gl::DrawArrays(gl::TRIANGLES, 0, 60);
         }

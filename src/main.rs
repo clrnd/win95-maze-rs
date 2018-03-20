@@ -67,11 +67,12 @@ fn main() {
     let mut wall_renderer = unsafe {
         WallRenderer::new(textures)
     };
-
     build_walls(&maze, &mut wall_renderer);
 
-    let mut ico_renderer = unsafe { IcoRenderer::new() };
-    ico_renderer.add( Ico { pos: vec3(0.5, 0.0, 1.5) });
+    let mut ico_renderer = unsafe {
+        IcoRenderer::new()
+    };
+    add_icos(&maze, &mut ico_renderer);
 
     let mut walker = Walker::new(&maze);
 
@@ -96,11 +97,14 @@ fn main() {
         let delta_time = (current_time - last_frame) as f32;
         last_frame = current_time;
 
-        //let arrived = update_camera(&mut camera, &walker, delta_time);
-        //if arrived {
-        //    walker.next();
-        //}
+        if true {
+        let arrived = update_camera(&mut camera, &walker, delta_time);
+        if arrived {
+            walker.next();
+        }
+        } else {
         handle_input(&window, &mut camera, delta_time * 3.0);
+        }
 
         let view = Matrix4::look_at(camera.pos,
                                     camera.pos + camera.dir,
@@ -220,6 +224,26 @@ fn build_walls(maze: &Maze, wall_renderer: &mut WallRenderer) {
     }
 }
 
+fn add_icos(maze: &Maze, ico_renderer: &mut IcoRenderer) {
+    // let's say there is 2% of tiles with an icosahedron
+    let total = maze.width * maze.height;
+    let count = 2 * total / 100;
+    let indices = rand::seq::sample_indices(
+        &mut rand::thread_rng(), total, count);
+    let rnd_f = || rand::random::<f32>() * 2.0 - 1.0;
+
+    for x in indices {
+        let i = x / maze.width;
+        let j = x % maze.width;
+
+        ico_renderer.add(
+            Ico {
+                pos: vec3(j as f32 + 0.5, 0.0, i as f32 + 0.5),
+                axis: vec3(rnd_f(), rnd_f(), rnd_f()).normalize()
+            })
+    }
+}
+
 fn get_rand_tex() -> TexType {
     if rand::random::<f32>() < 0.9 {
         TexType::Brick
@@ -244,7 +268,7 @@ unsafe fn set_up_shaders() -> (Shader, HashMap<TexType, Texture>) {
                                      "shaders/fragment.glsl");
 
     shader_program.use_program();
-    shader_program.set_vec3(c_str!("color"), vec3(1.0, 0.0, 0.5));
+    shader_program.set_vec3(c_str!("color"), vec3(0.8, 0.0, 0.5));
 
     for (_, texture) in &textures {
         texture.bind();
