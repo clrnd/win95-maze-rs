@@ -107,7 +107,8 @@ impl WallRenderer {
         }
     }
 
-    unsafe fn modify_vbo(value: f32, idxs: &[usize]) {
+    unsafe fn modify_vbo(&self, value: f32, idxs: &[usize]) {
+        gl::BindBuffer(gl::ARRAY_BUFFER, self.vao);
         for i in idxs {
             gl::BufferSubData(gl::ARRAY_BUFFER,
                               (i * mem::size_of::<GLfloat>()) as GLintptr,
@@ -129,11 +130,10 @@ impl WallRenderer {
         };
 
         gl::BindVertexArray(self.vao);
-        gl::BindBuffer(gl::ARRAY_BUFFER, self.vao);
         shader_program.set_bool(c_str!("solid"), false);
 
         // Set texture coordinates of VBO
-        WallRenderer::modify_vbo(1.0, &[4, 8, 9, 13]);
+        self.modify_vbo(1.0, &[4, 8, 9, 13]);
 
         shader_program.set_int(c_str!("tex"),
                                self.textures[&TexType::Brick].number as i32);
@@ -143,7 +143,7 @@ impl WallRenderer {
                                self.textures[&TexType::Thing].number as i32);
         for w in &self.thing_walls { draw_wall(w) }
 
-        WallRenderer::modify_vbo(4.0, &[4, 8, 9, 13]);
+        self.modify_vbo(4.0, &[4, 8, 9, 13]);
         for w in &self.others {
             shader_program.set_int(c_str!("tex"),
                                self.textures[&w.texture].number as i32);

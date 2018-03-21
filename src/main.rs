@@ -13,10 +13,12 @@ mod walker;
 mod camera;
 mod texture;
 
+use std::cmp;
 use std::ffi::CStr;
 use std::collections::HashMap;
 
-use cgmath::{Matrix3, Matrix4, Deg, perspective, Point3, vec3, InnerSpace};
+use cgmath::{Matrix3, Matrix4, Deg, perspective,
+             Point3, vec3, EuclideanSpace, InnerSpace};
 use glfw::{Action, Context, Key};
 
 use wall::{Wall, WallRenderer, TexType};
@@ -57,7 +59,7 @@ fn main() {
     // vsync
     //glfw.set_swap_interval(glfw::SwapInterval::None);
 
-    let maze = Maze::new(20, 20);
+    let maze = Maze::new(5, 5);
     maze.print();
 
     let (shader_program, textures) = unsafe {
@@ -227,7 +229,7 @@ fn build_walls(maze: &Maze, wall_renderer: &mut WallRenderer) {
 fn add_icos(maze: &Maze, ico_renderer: &mut IcoRenderer) {
     // let's say there is 2% of tiles with an icosahedron
     let total = maze.width * maze.height;
-    let count = 2 * total / 100;
+    let count = cmp::max(2 * total / 100, 1);
     let indices = rand::seq::sample_indices(
         &mut rand::thread_rng(), total, count);
     let rnd_f = || rand::random::<f32>() * 2.0 - 1.0;
@@ -239,7 +241,8 @@ fn add_icos(maze: &Maze, ico_renderer: &mut IcoRenderer) {
         ico_renderer.add(
             Ico {
                 pos: vec3(j as f32 + 0.5, 0.0, i as f32 + 0.5),
-                axis: vec3(rnd_f(), rnd_f(), rnd_f()).normalize()
+                axis: vec3(rnd_f(), rnd_f(), rnd_f()).normalize(),
+                active: true
             })
     }
 }

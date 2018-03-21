@@ -76,6 +76,7 @@ impl Maze {
         self.grid[i][j] & W == 0
     }
 }
+
 fn carve_from(cx: usize, cy: usize, maze: &mut Maze) {
     let mut directions: [u8; 4] = [N, E, S, W];
     directions.sort_unstable_by_key(|_| rand::random::<u8>());
