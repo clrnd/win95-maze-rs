@@ -1,4 +1,5 @@
-# win95-maze-rs
-Windows 95® screensaver style maze in OpenGL and Rust.
+# Win 95 Maze Screensaver in Rust
 
-Some code take from [bwasty's](https://github.com/bwasty/learn-opengl-rs/).
+Win 95® screensaver-style maze in Rust with OpenGL.
+
+Some code take from bwasty's [learn-opengl-rs](https://github.com/bwasty/learn-opengl-rs/).
