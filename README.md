@@ -15,13 +15,13 @@ cargo install
 And then
 
 ```rust
-maze
+win95-maze
 ```
 
 or
 
 ```rust
-maze --fullscreen
+win95-maze --fullscreen
 ```
 
 for the full experience.

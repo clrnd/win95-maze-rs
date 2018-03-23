@@ -77,7 +77,7 @@ fn main() {
     // vsync off?
     //glfw.set_swap_interval(glfw::SwapInterval::None);
 
-    let maze = Maze::new(5, 5);
+    let maze = Maze::new(20, 20);
     maze.print();
 
     let mut state = State::Walking;

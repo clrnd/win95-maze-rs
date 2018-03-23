@@ -1,5 +1,5 @@
 [package]
-name = "maze"
+name = "win95-maze"
 version = "0.1.0"
 authors = ["clrnd <welcometothechango@gmail.com>"]
 
