@@ -36,11 +36,11 @@ impl Maze {
 
     pub fn print(&self) {
         print!(" ");
-        for _ in 0..self.width*2 - 3 { print!("_") }
+        for _ in 0..self.width*2 - 1 { print!("_") }
         println!();
-        for i in 0..self.width - 1 {
+        for i in 0..self.height  {
             print!("|");
-            for j in 0..self.height-1 {
+            for j in 0..self.width {
                 if self.grid[i][j] & S != 0 {
                     print!(" ")
                 } else {
@@ -97,8 +97,8 @@ fn carve_from(cx: usize, cy: usize, maze: &mut Maze) {
             _ => panic!()
         };
 
-        let valid_x = nx < (maze.width - 1);
-        let valid_y = ny < (maze.height - 1);
+        let valid_x = nx < maze.width;
+        let valid_y = ny < maze.height;
 
         if valid_x && valid_y && maze.grid[ny][nx] == 0 {
             maze.grid[cy][cx] |= d;

@@ -17,8 +17,7 @@ use std::cmp;
 use std::ffi::CStr;
 use std::collections::HashMap;
 
-use cgmath::{Matrix3, Matrix4, Deg, perspective,
-             Point3, vec3, EuclideanSpace, InnerSpace};
+use cgmath::{Matrix3, Matrix4, Deg, perspective, vec3, InnerSpace};
 use glfw::{Action, Context, Key};
 
 use wall::{Wall, WallRenderer, TexType};
@@ -55,7 +54,7 @@ fn main() {
     let (mut window, events) =
         glfw.create_window(WIDTH,
                            HEIGHT,
-                           "Hello this is window",
+                           "Wind95 Maze",
                            glfw::WindowMode::Windowed)
         .expect("Failed to create GLFW window.");
 
@@ -67,7 +66,7 @@ fn main() {
     // vsync
     //glfw.set_swap_interval(glfw::SwapInterval::None);
 
-    let maze = Maze::new(5, 5);
+    let maze = Maze::new(20, 20);
     maze.print();
 
     let mut state = State::Walking;
@@ -156,7 +155,6 @@ fn main() {
                     State::Walking
                 }
             };
-            println!("{:?}", state);
         };
 
         //handle_input(&window, &mut camera, delta_time * 3.0);
@@ -168,7 +166,7 @@ fn main() {
         // FPS counting
         if (current_time - last_second) > 1.0 {
             last_second = current_time;
-            //println!("FPS: {}", frame_count);
+            println!("FPS: {}", frame_count);
             frame_count = 0;
         } else {
             frame_count += 1;
@@ -197,7 +195,7 @@ fn main() {
 fn build_walls(maze: &Maze, wall_renderer: &mut WallRenderer) {
 
     // north walls
-    for j in 0..maze.width-1 {
+    for j in 0..maze.width {
         let tex = get_rand_tex();
         wall_renderer.add(
             Wall {
@@ -209,7 +207,7 @@ fn build_walls(maze: &Maze, wall_renderer: &mut WallRenderer) {
     }
 
     // west walls
-    for i in 0..maze.height-1 {
+    for i in 0..maze.height {
         let tex = get_rand_tex();
         wall_renderer.add(
             Wall {
@@ -221,8 +219,8 @@ fn build_walls(maze: &Maze, wall_renderer: &mut WallRenderer) {
     }
 
     // inner walls but only east or south
-    for i in 0..maze.height-1 {
-        for j in 0..maze.width-1 {
+    for i in 0..maze.height {
+        for j in 0..maze.width {
 
             // south wall
             if maze.south(i, j) {
@@ -282,7 +280,6 @@ fn gen_icos(maze: &Maze) -> IcoMap {
     for x in indices {
         let i = x / (maze.width - 1);
         let j = x % (maze.width - 1);
-        println!("({}, {})", i, j);
 
         icos.insert(
             (i, j),
