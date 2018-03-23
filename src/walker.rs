@@ -1,5 +1,5 @@
 use rand;
-use cgmath::{vec3, Vector3};
+use cgmath::{vec3, Point3, Vector3};
 
 use maze::Maze;
 
@@ -62,6 +62,14 @@ impl<'a> Walker<'a> {
             Direction::West => self.maze.west(self.i, self.j)
         }
 
+    }
+
+    pub fn pos(&self) -> (usize, usize) {
+        (self.i, self.j)
+    }
+
+    pub fn to_point(&self) -> Point3<f32> {
+        Point3::new(self.j as f32 + 0.5, 0.0, self.i as f32 + 0.5)
     }
 
     pub fn next(&mut self) {

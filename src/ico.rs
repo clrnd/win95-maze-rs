@@ -4,7 +4,7 @@ use std::ffi::CStr;
 
 use gl;
 use gl::types::*;
-use cgmath::{Matrix4, Deg, Vector3};
+use cgmath::{Matrix4, Deg, Vector3, MetricSpace};
 
 use shader::Shader;
 
@@ -80,7 +80,6 @@ pub struct Ico {
 
 #[derive(Debug)]
 pub struct IcoRenderer {
-    icos: Vec<Ico>,
     vao: GLuint,
     vbo: GLuint
 }
@@ -117,27 +116,20 @@ impl IcoRenderer {
         gl::EnableVertexAttribArray(2);
 
         IcoRenderer {
-            icos: Vec::new(),
             vao: vao,
             vbo: vbo
         }
     }
 
-    pub fn add(&mut self, ico: Ico) {
-        self.icos.push(ico)
-    }
-
-    pub unsafe fn draw(&self, shader_program: &Shader, t: f32) {
+    pub unsafe fn draw(&self, shader_program: &Shader, ico: &Ico, t: f32) {
 
         gl::BindVertexArray(self.vao);
         shader_program.set_bool(c_str!("solid"), true);
 
-        for ico in self.icos.iter().filter(|ico| ico.active) {
-            let model = Matrix4::from_translation(ico.pos) *
-                        Matrix4::from_axis_angle(ico.axis, Deg(t * 100.0)) *
-                        Matrix4::from_scale(0.25);
-            shader_program.set_mat4(c_str!("model"), model);
-            gl::DrawArrays(gl::TRIANGLES, 0, 60);
-        }
+        let model = Matrix4::from_translation(ico.pos) *
+                    Matrix4::from_axis_angle(ico.axis, Deg(t * 100.0)) *
+                    Matrix4::from_scale(0.25);
+        shader_program.set_mat4(c_str!("model"), model);
+        gl::DrawArrays(gl::TRIANGLES, 0, 60);
     }
 }

@@ -33,6 +33,14 @@ use texture::Texture;
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
 
+type IcoMap = HashMap<(usize, usize), Ico>;
+
+#[derive(Debug)]
+enum State {
+    Walking,
+    Turning,
+    Rolling
+}
 
 fn main() {
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
@@ -62,6 +70,8 @@ fn main() {
     let maze = Maze::new(5, 5);
     maze.print();
 
+    let mut state = State::Walking;
+
     let (shader_program, textures) = unsafe {
         set_up_shaders()
     };
@@ -71,10 +81,10 @@ fn main() {
     };
     build_walls(&maze, &mut wall_renderer);
 
-    let mut ico_renderer = unsafe {
+    let ico_renderer = unsafe {
         IcoRenderer::new()
     };
-    add_icos(&maze, &mut ico_renderer);
+    let mut icos = gen_icos(&maze);
 
     let mut walker = Walker::new(&maze);
 
@@ -87,6 +97,7 @@ fn main() {
     let mut frame_count = 0;
     let mut last_second = glfw.get_time();
     let mut last_frame = glfw.get_time();
+    let mut next_camera_y = -1.0;
 
     walker.next();
     while !window.should_close() {
@@ -99,14 +110,56 @@ fn main() {
         let delta_time = (current_time - last_frame) as f32;
         last_frame = current_time;
 
-        if true {
-        let arrived = update_camera(&mut camera, &walker, delta_time);
-        if arrived {
-            walker.next();
-        }
-        } else {
-        handle_input(&window, &mut camera, delta_time * 3.0);
-        }
+        // camera movement
+        let completed = match state {
+            State::Walking => {
+                camera.move_to(walker.to_point(), delta_time)
+            }
+            State::Turning => {
+                let v_dir = walker.direction.to_vec();
+                camera.rotate_to(v_dir, delta_time)
+            }
+            State::Rolling => {
+                camera.roll_to(vec3(0.0, next_camera_y, 0.0), delta_time)
+            }
+        };
+
+        if completed {
+            state = match state {
+                State::Walking => {
+                    walker.next();
+                    let v_dir = walker.direction.to_vec();
+                    if camera.looking_at(v_dir) {
+                        if icos.contains_key(&walker.pos()) {
+                            State::Rolling
+                        } else {
+                            State::Walking
+                        }
+                    } else {
+                        State::Turning
+                    }
+                }
+                State::Turning => {
+                    if icos.contains_key(&walker.pos()) {
+                        State::Rolling
+                    } else {
+                        State::Walking
+                    }
+                }
+                State::Rolling => {
+                    next_camera_y = if camera.upside_down() {
+                        -1.0
+                    } else {
+                        1.0
+                    };
+                    icos.remove(&walker.pos());
+                    State::Walking
+                }
+            };
+            println!("{:?}", state);
+        };
+
+        //handle_input(&window, &mut camera, delta_time * 3.0);
 
         let view = Matrix4::look_at(camera.pos,
                                     camera.pos + camera.dir,
@@ -115,12 +168,13 @@ fn main() {
         // FPS counting
         if (current_time - last_second) > 1.0 {
             last_second = current_time;
-            println!("FPS: {}", frame_count);
+            //println!("FPS: {}", frame_count);
             frame_count = 0;
         } else {
             frame_count += 1;
         }
 
+        // rendering
         unsafe {
             gl::ClearColor(0.2, 0.3, 0.3, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
@@ -129,25 +183,14 @@ fn main() {
             shader_program.set_mat4(c_str!("proj"), proj);
 
             wall_renderer.draw(&shader_program);
-            ico_renderer.draw(&shader_program, current_time as f32);
+            for (_, ico) in &icos {
+                ico_renderer.draw(
+                    &shader_program, ico, current_time as f32);
+            }
         }
 
         window.swap_buffers();
         glfw.poll_events();
-    }
-}
-
-fn update_camera(camera: &mut Camera, walker: &Walker, dt: f32) -> bool {
-    let v_dir = walker.direction.to_vec();
-
-    if camera.looking_at(v_dir) {
-        let p_to = Point3::new(walker.j as f32 + 0.5,
-                               0.0,
-                               walker.i as f32 + 0.5);
-        camera.move_to(p_to, dt)
-    } else {
-        camera.rotate_to(v_dir, dt);
-        false
     }
 }
 
@@ -226,25 +269,31 @@ fn build_walls(maze: &Maze, wall_renderer: &mut WallRenderer) {
     }
 }
 
-fn add_icos(maze: &Maze, ico_renderer: &mut IcoRenderer) {
+fn gen_icos(maze: &Maze) -> IcoMap {
     // let's say there is 2% of tiles with an icosahedron
-    let total = maze.width * maze.height;
-    let count = cmp::max(2 * total / 100, 1);
+    let total = (maze.width - 1) * (maze.height - 1);
+    let count = cmp::max(2 * total / 100, 2);
     let indices = rand::seq::sample_indices(
         &mut rand::thread_rng(), total, count);
     let rnd_f = || rand::random::<f32>() * 2.0 - 1.0;
 
-    for x in indices {
-        let i = x / maze.width;
-        let j = x % maze.width;
+    let mut icos = HashMap::new();
 
-        ico_renderer.add(
+    for x in indices {
+        let i = x / (maze.width - 1);
+        let j = x % (maze.width - 1);
+        println!("({}, {})", i, j);
+
+        icos.insert(
+            (i, j),
             Ico {
                 pos: vec3(j as f32 + 0.5, 0.0, i as f32 + 0.5),
                 axis: vec3(rnd_f(), rnd_f(), rnd_f()).normalize(),
                 active: true
-            })
+            });
     }
+
+    icos
 }
 
 fn get_rand_tex() -> TexType {

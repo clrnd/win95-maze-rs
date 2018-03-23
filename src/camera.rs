@@ -32,16 +32,18 @@ impl Camera {
         }
     }
 
-    pub fn rotate_to(&mut self, v_dir: Vector3<f32>, dt: f32) {
+    pub fn rotate_to(&mut self, v_dir: Vector3<f32>, dt: f32) -> bool {
         let sign = Camera::rotation_sign(&self.dir, &v_dir);
 
         self.dir = Matrix3::from_angle_y(Rad(dt * sign * TURN_SPEED)) * self.dir;
 
         // if the rotation went through the objective, just assign it
-        let new_sign = Camera::rotation_sign(&self.dir, &v_dir);;
+        let new_sign = Camera::rotation_sign(&self.dir, &v_dir);
         if (sign * new_sign) < 0.0 {
             self.dir = v_dir;
         }
+
+        self.looking_at(v_dir)
     }
 
     pub fn move_to(&mut self, p_to: Point3<f32>, dt: f32) -> bool {
@@ -58,5 +60,22 @@ impl Camera {
             self.pos = p_to;
             true
         }
+    }
+
+    pub fn roll_to(&mut self, v_dir: Vector3<f32>, dt: f32) -> bool {
+        self.up = Matrix3::from_axis_angle(
+            self.dir,
+            Rad(dt * TURN_SPEED)) * self.up;
+
+        if self.up.angle(v_dir) < Rad(0.1) {
+            self.up = v_dir;
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn upside_down(&self) -> bool {
+        self.up.y > 0.0
     }
 }
