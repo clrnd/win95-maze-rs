@@ -132,21 +132,23 @@ impl WallRenderer {
         gl::BindVertexArray(self.vao);
         shader_program.set_bool(c_str!("solid"), false);
 
-        // Set texture coordinates of VBO
+        // Set coordinates of VBO for non-tiled textures
         self.modify_vbo(1.0, &[4, 8, 9, 13]);
 
-        shader_program.set_int(c_str!("tex"),
-                               self.textures[&TexType::Brick].number as i32);
-        for w in &self.brick_walls { draw_wall(w) }
+        shader_program.set_int(
+            c_str!("tex"), self.textures[&TexType::Brick].number as i32);
+        self.brick_walls.iter().for_each(&draw_wall);
 
-        shader_program.set_int(c_str!("tex"),
-                               self.textures[&TexType::Thing].number as i32);
-        for w in &self.thing_walls { draw_wall(w) }
+        shader_program.set_int(
+            c_str!("tex"), self.textures[&TexType::Thing].number as i32);
+        self.thing_walls.iter().for_each(&draw_wall);
 
+        // Set coordinates of VBO for tiled textures
         self.modify_vbo(4.0, &[4, 8, 9, 13]);
+
         for w in &self.others {
-            shader_program.set_int(c_str!("tex"),
-                               self.textures[&w.texture].number as i32);
+            shader_program.set_int(
+                c_str!("tex"), self.textures[&w.texture].number as i32);
             draw_wall(w)
         }
     }

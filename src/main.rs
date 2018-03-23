@@ -54,7 +54,7 @@ fn main() {
     let (mut window, events) =
         glfw.create_window(WIDTH,
                            HEIGHT,
-                           "Wind95 Maze",
+                           "Win95 Maze",
                            glfw::WindowMode::Windowed)
         .expect("Failed to create GLFW window.");
 
@@ -63,16 +63,19 @@ fn main() {
 
     gl::load_with(|s| window.get_proc_address(s) as *const _);
 
-    // vsync
+    // vsync off?
     //glfw.set_swap_interval(glfw::SwapInterval::None);
 
-    let maze = Maze::new(20, 20);
+    let maze = Maze::new(5, 5);
     maze.print();
 
     let mut state = State::Walking;
 
+    let ratio = WIDTH as f32 / HEIGHT as f32;
+    let proj = perspective(Deg(60.0), ratio, 0.1, 100.0);
+
     let (shader_program, textures) = unsafe {
-        set_up_shaders()
+        (set_up_shaders(proj), set_up_textures())
     };
 
     let mut wall_renderer = unsafe {
@@ -87,16 +90,11 @@ fn main() {
 
     let mut walker = Walker::new(&maze);
 
-    let ratio = WIDTH as f32 / HEIGHT as f32;
-
     let mut camera = Camera::new(&walker);
-
-    let proj = perspective(Deg(60.0), ratio, 0.1, 100.0);
 
     let mut frame_count = 0;
     let mut last_second = glfw.get_time();
     let mut last_frame = glfw.get_time();
-    let mut next_camera_y = -1.0;
 
     walker.next();
     while !window.should_close() {
@@ -112,17 +110,20 @@ fn main() {
         // camera movement
         let completed = match state {
             State::Walking => {
-                camera.move_to(walker.to_point(), delta_time)
+                //camera.move_to(walker.to_point(), delta_time)
+                false
             }
             State::Turning => {
                 let v_dir = walker.direction.to_vec();
                 camera.rotate_to(v_dir, delta_time)
             }
             State::Rolling => {
-                camera.roll_to(vec3(0.0, next_camera_y, 0.0), delta_time)
+                let y = if camera.upside_down { 1.0 } else { -1.0 };
+                camera.roll_to(vec3(0.0, y, 0.0), delta_time)
             }
         };
 
+        // next state
         if completed {
             state = match state {
                 State::Walking => {
@@ -146,18 +147,14 @@ fn main() {
                     }
                 }
                 State::Rolling => {
-                    next_camera_y = if camera.upside_down() {
-                        -1.0
-                    } else {
-                        1.0
-                    };
+                    camera.upside_down = !camera.upside_down;
                     icos.remove(&walker.pos());
                     State::Walking
                 }
             };
         };
 
-        //handle_input(&window, &mut camera, delta_time * 3.0);
+        handle_input(&window, &mut camera, delta_time * 3.0);
 
         let view = Matrix4::look_at(camera.pos,
                                     camera.pos + camera.dir,
@@ -178,7 +175,6 @@ fn main() {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
             shader_program.set_mat4(c_str!("view"), view);
-            shader_program.set_mat4(c_str!("proj"), proj);
 
             wall_renderer.draw(&shader_program);
             for (_, ico) in &icos {
@@ -268,9 +264,9 @@ fn build_walls(maze: &Maze, wall_renderer: &mut WallRenderer) {
 }
 
 fn gen_icos(maze: &Maze) -> IcoMap {
-    // let's say there is 2% of tiles with an icosahedron
+    // let's say there is 8% of tiles with an icosahedron
     let total = (maze.width - 1) * (maze.height - 1);
-    let count = cmp::max(2 * total / 100, 2);
+    let count = cmp::max(8 * total / 100, 2);
     let indices = rand::seq::sample_indices(
         &mut rand::thread_rng(), total, count);
     let rnd_f = || rand::random::<f32>() * 2.0 - 1.0;
@@ -301,29 +297,34 @@ fn get_rand_tex() -> TexType {
     }
 }
 
-unsafe fn set_up_shaders() -> (Shader, HashMap<TexType, Texture>) {
-    gl::Enable(gl::DEPTH_TEST);
-    //gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
-
-    // textures
+unsafe fn set_up_textures() -> HashMap<TexType, Texture> {
     let mut textures = HashMap::new();
     textures.insert(TexType::Brick, Texture::new("resources/brick.bmp", 0));
     textures.insert(TexType::Thing, Texture::new("resources/thing.bmp", 1));
     textures.insert(TexType::Ceiling, Texture::new("resources/ceiling.bmp", 2));
     textures.insert(TexType::Floor, Texture::new("resources/floor.bmp", 3));
 
-    // shaders
-    let shader_program = Shader::new("shaders/vertex.glsl",
-                                     "shaders/fragment.glsl");
-
-    shader_program.use_program();
-    shader_program.set_vec3(c_str!("color"), vec3(0.8, 0.0, 0.5));
-
     for (_, texture) in &textures {
         texture.bind();
     }
 
-    (shader_program, textures)
+    textures
+}
+
+unsafe fn set_up_shaders(proj: Matrix4<f32>) -> Shader {
+    gl::Enable(gl::DEPTH_TEST);
+
+    // wireframes?
+    //gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
+
+    let shader_program = Shader::new("shaders/vertex.glsl",
+                                     "shaders/fragment.glsl");
+
+    shader_program.use_program();
+    shader_program.set_vec3(c_str!("color"), vec3(0.8, 0.1, 0.5));
+    shader_program.set_mat4(c_str!("proj"), proj);
+
+    shader_program
 }
 
 fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent) {

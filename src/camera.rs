@@ -8,7 +8,8 @@ const TURN_SPEED: f32 = 2.5;
 pub struct Camera {
     pub pos: Point3<f32>,
     pub dir: Vector3<f32>,
-    pub up: Vector3<f32>
+    pub up: Vector3<f32>,
+    pub upside_down: bool,
 }
 
 impl Camera {
@@ -16,7 +17,8 @@ impl Camera {
         Camera {
             pos: Point3::new(walker.i as f32 + 0.5, 0.0, walker.j as f32 + 0.5),
             dir: walker.direction.to_vec(),
-            up: vec3(0.0, 1.0, 0.0)
+            up: vec3(0.0, 1.0, 0.0),
+            upside_down: false
         }
     }
 
@@ -73,9 +75,5 @@ impl Camera {
         } else {
             false
         }
-    }
-
-    pub fn upside_down(&self) -> bool {
-        self.up.y > 0.0
     }
 }
