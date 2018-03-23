@@ -13,6 +13,7 @@ mod walker;
 mod camera;
 mod texture;
 
+use std::env;
 use std::cmp;
 use std::ffi::CStr;
 use std::collections::HashMap;
@@ -51,13 +52,23 @@ fn main() {
         glfw.window_hint(glfw::WindowHint::OpenGlForwardCompat(true));
     }
 
-    let (mut window, events) =
-        glfw.create_window(WIDTH,
-                           HEIGHT,
-                           "Win95 Maze",
-                           glfw::WindowMode::Windowed)
-        .expect("Failed to create GLFW window.");
+    let (mut window, events) = glfw.with_primary_monitor(
+        |glfw: &mut _, m: Option<&glfw::Monitor>| {
+            let fullscreen = env::args().any(|a| a == "--fullscreen");
+            let (mode, w, h) = if fullscreen {
+                let vid = m.unwrap().get_video_mode().unwrap();
+                (glfw::WindowMode::FullScreen(m.unwrap()),
+                 vid.width,
+                 vid.height)
+            } else {
+                (glfw::WindowMode::Windowed, WIDTH, HEIGHT)
+            };
 
+            glfw.create_window(w, h, "Win95 Maze", mode)
+                .expect("Failed to create GLFW window.")
+        });
+
+    let (width, height) = window.get_size();
     window.set_key_polling(true);
     window.make_current();
 
@@ -71,7 +82,7 @@ fn main() {
 
     let mut state = State::Walking;
 
-    let ratio = WIDTH as f32 / HEIGHT as f32;
+    let ratio = width as f32 / height as f32;
     let proj = perspective(Deg(60.0), ratio, 0.1, 100.0);
 
     let (shader_program, textures) = unsafe {
@@ -110,8 +121,7 @@ fn main() {
         // camera movement
         let completed = match state {
             State::Walking => {
-                //camera.move_to(walker.to_point(), delta_time)
-                false
+                camera.move_to(walker.to_point(), delta_time)
             }
             State::Turning => {
                 let v_dir = walker.direction.to_vec();
@@ -154,7 +164,7 @@ fn main() {
             };
         };
 
-        handle_input(&window, &mut camera, delta_time * 3.0);
+        //handle_input(&window, &mut camera, delta_time * 3.0);
 
         let view = Matrix4::look_at(camera.pos,
                                     camera.pos + camera.dir,
