@@ -33,7 +33,6 @@ use texture::Texture;
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
 
-type IcoMap = HashMap<(usize, usize), Ico>;
 
 #[derive(Debug)]
 enum State {
@@ -74,7 +73,7 @@ fn main() {
 
     gl::load_with(|s| window.get_proc_address(s) as *const _);
 
-    // vsync off?
+    // vsync off
     //glfw.set_swap_interval(glfw::SwapInterval::None);
 
     let maze = Maze::new(20, 20);
@@ -165,6 +164,7 @@ fn main() {
             };
         };
 
+        // manual movement
         //handle_input(&window, &mut camera, delta_time * 3.0);
 
         let view = Matrix4::look_at(camera.pos,
@@ -207,9 +207,9 @@ fn build_walls(maze: &Maze, wall_renderer: &mut WallRenderer) {
         wall_renderer.add(
             Wall {
                 pos: vec3(j as f32 + 0.5, 0.0, 0.0),
-                rotate_y: 0.0,
-                rotate_x: 0.0,
-                texture: tex
+                angle_y: 0.0,
+                angle_x: 0.0,
+                textype: tex
             })
     }
 
@@ -219,9 +219,9 @@ fn build_walls(maze: &Maze, wall_renderer: &mut WallRenderer) {
         wall_renderer.add(
             Wall {
                 pos: vec3(0.0, 0.0, i as f32 + 0.5),
-                rotate_y: 90.0,
-                rotate_x: 0.0,
-                texture: tex
+                angle_y: 90.0,
+                angle_x: 0.0,
+                textype: tex
             })
     }
 
@@ -235,9 +235,9 @@ fn build_walls(maze: &Maze, wall_renderer: &mut WallRenderer) {
                 wall_renderer.add(
                     Wall {
                         pos: vec3(j as f32 + 0.5, 0.0, i as f32 + 1.0),
-                        rotate_y: 0.0,
-                        rotate_x: 0.0,
-                        texture: tex
+                        angle_y: 0.0,
+                        angle_x: 0.0,
+                        textype: tex
                     })
             }
 
@@ -247,9 +247,9 @@ fn build_walls(maze: &Maze, wall_renderer: &mut WallRenderer) {
                 wall_renderer.add(
                     Wall {
                         pos: vec3(j as f32 + 1.0, 0.0, i as f32 + 0.5),
-                        rotate_y: 90.0,
-                        rotate_x: 0.0,
-                        texture: tex
+                        angle_y: 90.0,
+                        angle_x: 0.0,
+                        textype: tex
                     })
             }
 
@@ -257,24 +257,24 @@ fn build_walls(maze: &Maze, wall_renderer: &mut WallRenderer) {
             wall_renderer.add(
                 Wall {
                     pos: vec3(j as f32 + 0.5, 0.5, i as f32 + 0.5),
-                    rotate_y: 0.0,
-                    rotate_x: 90.0,
-                    texture: TexType::Ceiling
+                    angle_y: 0.0,
+                    angle_x: 90.0,
+                    textype: TexType::Ceiling
                 });
 
             // floor wall
             wall_renderer.add(
                 Wall {
                     pos: vec3(j as f32 + 0.5, -0.5, i as f32 + 0.5),
-                    rotate_y: 0.0,
-                    rotate_x: 90.0,
-                    texture: TexType::Floor
+                    angle_y: 0.0,
+                    angle_x: 90.0,
+                    textype: TexType::Floor
                 });
         }
     }
 }
 
-fn gen_icos(maze: &Maze) -> IcoMap {
+fn gen_icos(maze: &Maze) -> HashMap<(usize, usize), Ico> {
     // let's say there is 8% of tiles with an icosahedron
     let total = (maze.width - 1) * (maze.height - 1);
     let count = cmp::max(8 * total / 100, 2);
@@ -347,6 +347,7 @@ fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent) {
     }
 }
 
+#[allow(dead_code)]
 fn handle_input(window: &glfw::Window, camera: &mut Camera, speed: f32) {
     let right = camera.dir.cross(camera.up).normalize();
     let turn_speed = 60.0;

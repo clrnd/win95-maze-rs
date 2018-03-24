@@ -34,9 +34,9 @@ pub enum TexType {
 #[derive(Debug)]
 pub struct Wall {
     pub pos: Vector3<f32>,
-    pub rotate_y: f32,
-    pub rotate_x: f32,
-    pub texture: TexType
+    pub angle_y: f32,
+    pub angle_x: f32,
+    pub textype: TexType
 }
 
 #[derive(Debug)]
@@ -68,14 +68,14 @@ impl WallRenderer {
         gl::BufferData(gl::ARRAY_BUFFER,
                        mem::size_of::<[f32; 20]>() as isize,
                        &VERTICES[0] as *const f32 as *const _,
-                       gl::DYNAMIC_DRAW);
+                       gl::STATIC_DRAW);
 
         //* EBO data
         gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
         gl::BufferData(gl::ELEMENT_ARRAY_BUFFER,
                        mem::size_of::<[u32; 6]>() as isize,
                        &INDICES[0] as *const u32 as *const _,
-                       gl::DYNAMIC_DRAW);
+                       gl::STATIC_DRAW);
 
         //* vertex attribs
         // aPos = 0
@@ -100,20 +100,10 @@ impl WallRenderer {
     }
 
     pub fn add(&mut self, wall: Wall) {
-        match wall.texture {
+        match wall.textype {
             TexType::Brick => self.brick_walls.push(wall),
             TexType::Thing => self.thing_walls.push(wall),
             _ => self.others.push(wall)
-        }
-    }
-
-    unsafe fn modify_vbo(&self, value: f32, idxs: &[usize]) {
-        gl::BindBuffer(gl::ARRAY_BUFFER, self.vao);
-        for i in idxs {
-            gl::BufferSubData(gl::ARRAY_BUFFER,
-                              (i * mem::size_of::<GLfloat>()) as GLintptr,
-                              mem::size_of::<GLfloat>() as isize,
-                              &value as *const f32 as *const _);
         }
     }
 
@@ -121,8 +111,8 @@ impl WallRenderer {
 
         let draw_wall = |wall: &Wall| {
             let model = Matrix4::from_translation(wall.pos) *
-                        Matrix4::from_angle_y(Deg(wall.rotate_y)) *
-                        Matrix4::from_angle_x(Deg(wall.rotate_x));
+                        Matrix4::from_angle_y(Deg(wall.angle_y)) *
+                        Matrix4::from_angle_x(Deg(wall.angle_x));
 
             shader_program.set_mat4(c_str!("model"), model);
 
@@ -133,8 +123,7 @@ impl WallRenderer {
         shader_program.set_bool(c_str!("solid"), false);
 
         // Set coordinates of VBO for non-tiled textures
-        self.modify_vbo(1.0, &[4, 8, 9, 13]);
-
+        shader_program.set_int(c_str!("tiling"), 1);
         shader_program.set_int(
             c_str!("tex"), self.textures[&TexType::Brick].number as i32);
         self.brick_walls.iter().for_each(&draw_wall);
@@ -144,11 +133,11 @@ impl WallRenderer {
         self.thing_walls.iter().for_each(&draw_wall);
 
         // Set coordinates of VBO for tiled textures
-        self.modify_vbo(4.0, &[4, 8, 9, 13]);
+        shader_program.set_int(c_str!("tiling"), 4);
 
         for w in &self.others {
             shader_program.set_int(
-                c_str!("tex"), self.textures[&w.texture].number as i32);
+                c_str!("tex"), self.textures[&w.textype].number as i32);
             draw_wall(w)
         }
     }

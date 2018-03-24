@@ -6,6 +6,7 @@ out vec4 FragColor;
 
 uniform sampler2D tex;
 uniform bool solid;
+uniform int tiling;
 uniform vec3 color;
 
 void main() {
@@ -14,6 +15,6 @@ void main() {
         float diffuse = max(dot(oNor, lightDir), 0.2);
         FragColor = vec4(color * diffuse * 0.2, 0.0);
     } else {
-        FragColor = texture(tex, oTex);
+        FragColor = texture(tex, oTex * tiling);
     }
 }
