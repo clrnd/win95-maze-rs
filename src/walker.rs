@@ -94,8 +94,6 @@ impl<'a> Walker<'a> {
                     Direction::West => self.j -= 1
                 }
                 self.direction = *d;
-                //println!("Walker: {:?}; (i, j) = ({}, {})",
-                //         self.direction, self.i, self.j);
                 return;
             }
         }
