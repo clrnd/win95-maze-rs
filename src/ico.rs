@@ -124,12 +124,12 @@ impl IcoRenderer {
     pub unsafe fn draw(&self, shader_program: &Shader, ico: &Ico, t: f32) {
 
         gl::BindVertexArray(self.vao);
-        shader_program.set_bool(c_str!("solid"), true);
 
         let model = Matrix4::from_translation(ico.pos) *
                     Matrix4::from_axis_angle(ico.axis, Deg(t * 100.0)) *
                     Matrix4::from_scale(0.25);
         shader_program.set_mat4(c_str!("model"), model);
+
         gl::DrawArrays(gl::TRIANGLES, 0, 60);
     }
 }

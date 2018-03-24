@@ -23,12 +23,13 @@ const INDICES: [u32; 6] = [
     1, 2, 3
 ];
 
-#[derive(Hash, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum TexType {
     Brick,
     Thing,
     Ceiling,
-    Floor
+    Floor,
+    Other // dummy type for `last_textype`
 }
 
 #[derive(Debug)]
@@ -42,11 +43,21 @@ pub struct Wall {
 #[derive(Debug)]
 pub struct WallRenderer {
     textures: HashMap<TexType, Texture>,
-    brick_walls: Vec<Wall>,
-    thing_walls: Vec<Wall>,
-    others: Vec<Wall>,
+    last_textype: TexType,
     vao: GLuint,
     vbo: GLuint
+}
+
+impl TexType {
+    pub fn tiling(&self) -> i32 {
+        match *self {
+            TexType::Brick |
+            TexType::Thing => 1,
+            TexType::Ceiling |
+            TexType::Floor => 4,
+            _ => panic!()
+        }
+    }
 }
 
 impl WallRenderer {
@@ -91,54 +102,30 @@ impl WallRenderer {
 
         WallRenderer {
             textures: textures,
-            brick_walls: Vec::new(),
-            thing_walls: Vec::new(),
-            others: Vec::new(),
+            last_textype: TexType::Other,
             vao: vao,
             vbo: vbo
         }
     }
 
-    pub fn add(&mut self, wall: Wall) {
-        match wall.textype {
-            TexType::Brick => self.brick_walls.push(wall),
-            TexType::Thing => self.thing_walls.push(wall),
-            _ => self.others.push(wall)
-        }
-    }
-
-    pub unsafe fn draw(&self, shader_program: &Shader) {
-
-        let draw_wall = |wall: &Wall| {
-            let model = Matrix4::from_translation(wall.pos) *
-                        Matrix4::from_angle_y(Deg(wall.angle_y)) *
-                        Matrix4::from_angle_x(Deg(wall.angle_x));
-
-            shader_program.set_mat4(c_str!("model"), model);
-
-            gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, ptr::null());
-        };
-
+    pub unsafe fn draw(&mut self, shader_program: &Shader, wall: &Wall) {
         gl::BindVertexArray(self.vao);
-        shader_program.set_bool(c_str!("solid"), false);
 
-        // Set coordinates of VBO for non-tiled textures
-        shader_program.set_int(c_str!("tiling"), 1);
-        shader_program.set_int(
-            c_str!("tex"), self.textures[&TexType::Brick].number as i32);
-        self.brick_walls.iter().for_each(&draw_wall);
+        let model = Matrix4::from_translation(wall.pos) *
+                    Matrix4::from_angle_y(Deg(wall.angle_y)) *
+                    Matrix4::from_angle_x(Deg(wall.angle_x));
 
-        shader_program.set_int(
-            c_str!("tex"), self.textures[&TexType::Thing].number as i32);
-        self.thing_walls.iter().for_each(&draw_wall);
+        shader_program.set_mat4(c_str!("model"), model);
 
-        // Set coordinates of VBO for tiled textures
-        shader_program.set_int(c_str!("tiling"), 4);
+        // only change uniforms if texture changed
+        if self.last_textype != wall.textype {
+            let tex = self.textures[&wall.textype].number as i32;
+            shader_program.set_int(c_str!("tex"), tex);
+            shader_program.set_int(c_str!("tiling"), wall.textype.tiling());
 
-        for w in &self.others {
-            shader_program.set_int(
-                c_str!("tex"), self.textures[&w.textype].number as i32);
-            draw_wall(w)
+            self.last_textype = wall.textype;
         }
+
+        gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, ptr::null());
     }
 }

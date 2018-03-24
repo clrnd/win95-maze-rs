@@ -6,8 +6,8 @@ out vec4 FragColor;
 
 uniform sampler2D tex;
 uniform bool solid;
-uniform int tiling;
 uniform vec3 color;
+uniform int tiling;
 
 void main() {
     if (solid) {

@@ -91,7 +91,7 @@ fn main() {
     let mut wall_renderer = unsafe {
         WallRenderer::new(textures)
     };
-    build_walls(&maze, &mut wall_renderer);
+    let walls = gen_walls(&maze);
 
     let ico_renderer = unsafe {
         IcoRenderer::new()
@@ -187,10 +187,14 @@ fn main() {
 
             shader_program.set_mat4(c_str!("view"), view);
 
-            wall_renderer.draw(&shader_program);
+            shader_program.set_bool(c_str!("solid"), false);
+            for wall in &walls {
+                wall_renderer.draw(&shader_program, wall);
+            }
+
+            shader_program.set_bool(c_str!("solid"), true);
             for (_, ico) in &icos {
-                ico_renderer.draw(
-                    &shader_program, ico, current_time as f32);
+                ico_renderer.draw(&shader_program, ico, current_time as f32);
             }
         }
 
@@ -199,12 +203,14 @@ fn main() {
     }
 }
 
-fn build_walls(maze: &Maze, wall_renderer: &mut WallRenderer) {
+fn gen_walls(maze: &Maze)  -> Vec<Wall> {
+
+    let mut walls = Vec::new();
 
     // north walls
     for j in 0..maze.width {
         let tex = get_rand_tex();
-        wall_renderer.add(
+        walls.push(
             Wall {
                 pos: vec3(j as f32 + 0.5, 0.0, 0.0),
                 angle_y: 0.0,
@@ -216,7 +222,7 @@ fn build_walls(maze: &Maze, wall_renderer: &mut WallRenderer) {
     // west walls
     for i in 0..maze.height {
         let tex = get_rand_tex();
-        wall_renderer.add(
+        walls.push(
             Wall {
                 pos: vec3(0.0, 0.0, i as f32 + 0.5),
                 angle_y: 90.0,
@@ -232,7 +238,7 @@ fn build_walls(maze: &Maze, wall_renderer: &mut WallRenderer) {
             // south wall
             if maze.south(i, j) {
                 let tex = get_rand_tex();
-                wall_renderer.add(
+                walls.push(
                     Wall {
                         pos: vec3(j as f32 + 0.5, 0.0, i as f32 + 1.0),
                         angle_y: 0.0,
@@ -244,7 +250,7 @@ fn build_walls(maze: &Maze, wall_renderer: &mut WallRenderer) {
             // east wall
             if maze.east(i, j) {
                 let tex = get_rand_tex();
-                wall_renderer.add(
+                walls.push(
                     Wall {
                         pos: vec3(j as f32 + 1.0, 0.0, i as f32 + 0.5),
                         angle_y: 90.0,
@@ -254,7 +260,7 @@ fn build_walls(maze: &Maze, wall_renderer: &mut WallRenderer) {
             }
 
             // ceiling wall
-            wall_renderer.add(
+            walls.push(
                 Wall {
                     pos: vec3(j as f32 + 0.5, 0.5, i as f32 + 0.5),
                     angle_y: 0.0,
@@ -263,7 +269,7 @@ fn build_walls(maze: &Maze, wall_renderer: &mut WallRenderer) {
                 });
 
             // floor wall
-            wall_renderer.add(
+            walls.push(
                 Wall {
                     pos: vec3(j as f32 + 0.5, -0.5, i as f32 + 0.5),
                     angle_y: 0.0,
@@ -272,6 +278,9 @@ fn build_walls(maze: &Maze, wall_renderer: &mut WallRenderer) {
                 });
         }
     }
+
+    walls.sort_unstable_by_key(|w| w.textype);
+    walls
 }
 
 fn gen_icos(maze: &Maze) -> HashMap<(usize, usize), Ico> {
