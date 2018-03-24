@@ -279,6 +279,7 @@ fn gen_walls(maze: &Maze)  -> Vec<Wall> {
         }
     }
 
+    // sort walls by textype to avoid changing uniforms so much
     walls.sort_unstable_by_key(|w| w.textype);
     walls
 }
