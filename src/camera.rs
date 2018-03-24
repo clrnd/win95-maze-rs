@@ -26,21 +26,23 @@ impl Camera {
         self.dir.angle(v_dir) < Rad(0.01)
     }
 
-    pub fn rotation_sign(v1: &Vector3<f32>, v2: &Vector3<f32>) -> f32 {
-        if v1.cross(*v2).y > 0.0 {
-            1.0
+    pub fn rotation_sign(&self, v1: &Vector3<f32>, v2: &Vector3<f32>) -> f32 {
+        let sign = if v1.cross(*v2).y > 0.0 { 1.0 } else { -1.0 };
+        if self.upside_down {
+            -1.0 * sign
         } else {
-            -1.0
+            sign
         }
     }
 
     pub fn rotate_to(&mut self, v_dir: Vector3<f32>, dt: f32) -> bool {
-        let sign = Camera::rotation_sign(&self.dir, &v_dir);
+        let sign = self.rotation_sign(&self.dir, &v_dir);
 
-        self.dir = Matrix3::from_angle_y(Rad(dt * sign * TURN_SPEED)) * self.dir;
+        self.dir = Matrix3::from_axis_angle(
+            self.up, Rad(dt * sign * TURN_SPEED)) * self.dir;
 
         // if the rotation went through the objective, just assign it
-        let new_sign = Camera::rotation_sign(&self.dir, &v_dir);
+        let new_sign = self.rotation_sign(&self.dir, &v_dir);
         if (sign * new_sign) < 0.0 {
             self.dir = v_dir;
         }
