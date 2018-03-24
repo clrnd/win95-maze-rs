@@ -25,3 +25,9 @@ win95-maze --fullscreen
 ```
 
 for the full experience.
+
+## Screenshots
+
+![hallway](https://raw.githubusercontent.com/alvare/win95-maze-rs/master/screenshots/4.png)
+
+![icosahedron](https://raw.githubusercontent.com/alvare/win95-maze-rs/master/screenshots/5.png)
