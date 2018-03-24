@@ -101,7 +101,8 @@ fn main() {
 
     let mut walker = Walker::new(&maze);
 
-    let mut camera = Camera::new(&walker);
+    let mut camera = Camera::new(walker.i, walker.j,
+                                 walker.direction.to_vec());
 
     let mut frame_count = 0;
     let mut last_second = glfw.get_time();

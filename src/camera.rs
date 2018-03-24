@@ -13,10 +13,10 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn new(walker: &Walker) -> Camera {
+    pub fn new(i: usize, j: usize, dir: Vector3<f32>) -> Camera {
         Camera {
-            pos: Point3::new(walker.i as f32 + 0.5, 0.0, walker.j as f32 + 0.5),
-            dir: walker.direction.to_vec(),
+            pos: Point3::new(i as f32 + 0.5, 0.0, j as f32 + 0.5),
+            dir: dir,
             up: vec3(0.0, 1.0, 0.0),
             upside_down: false
         }
