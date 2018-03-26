@@ -6,7 +6,9 @@ Some code take from bwasty's [learn-opengl-rs](https://github.com/bwasty/learn-o
 
 ## Compiling/Installing
 
-Should be as easy as:
+Assuming you have the [rust toolchain](https://www.rustup.rs/) and
+GLFW (`libglfw3` and `libglfw3-dev` in Ubuntu, `glfw3` in macOS) installed,
+it should be as easy as:
 
 ```rust
 cargo install
