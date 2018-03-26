@@ -96,10 +96,12 @@ vector and other specific data. Each has an associated renderer struct which hol
 VAO (vertex array object) and does the OpenGL initializing mambo-jambo.
 
 Both renderers have a `draw` method which takes the shader program,
-sets the appropriate matrices in the shader's uniforms and does the rendering.
+sets the appropriate matrices in the shader's uniforms and renders a VAO.
 
 The wall renderer has an extra check for when the texture type changed
 between drawings, so it only has to set those uniforms when needed.
+To maximize the benefit of this, walls are ordered by texture type.
+
 
 ### Shaders
 
@@ -107,7 +109,13 @@ The `Shader` and `Texture` modules are basically taken from [learn-opengl-rs](ht
 
 The shaders themselves are pretty simple: the vertex shader multiplies the
 model, view and projection matrices and then just passes the
-texture and normal properties down the pipeline to the fragment shader.
+texture and normal properties down the pipeline to the fragment shader:
+
+```glsl
+gl_Position = proj * view * model * vec4(aPos, 1.0);
+oTex = aTex;
+oNor = mat3(transpose(inverse(model))) * aNor;
+```
 
 Here, we find a little abuse of OpenGL's flexibility:
 
@@ -136,7 +144,17 @@ but not the second, and vice versa for the `WallRenderer`. I'm not sure if this
 was smart or just plain awful though.
 
 Finally the fragment shader, decides based on a `solid` flag, if to render using
-a texture or a diffuse lighting color.
+a texture or a diffuse lighting color:
+
+```glsl
+if (solid) {
+    vec3 lightDir = vec3(1.0, 1.0, 1.0);
+    float diffuse = max(dot(oNor, lightDir), 0.2);
+    FragColor = vec4(color * diffuse * 0.2, 0.0);
+} else {
+    FragColor = texture(tex, oTex * tiling);
+}
+```
 
 ### State
 
@@ -153,6 +171,9 @@ enum State {
 to control the camera, which after the completion of the
 movement methods, decides which state to take next with the position of
 the icosahedrons and the walker's direction.
+
+`Rolling` is for when the camera hits an icosahedron, which makes it go upside down
+and deletes the ico from the world.
 
 ## Screenshots
 
