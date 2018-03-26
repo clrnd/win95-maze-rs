@@ -97,6 +97,11 @@ Walls and icosahedrons are similar structs, with a `pos: Vector<f32>` position
 vector and other specific data. Each has an associated renderer struct which holds the
 VAO (vertex array object) and does the OpenGL initializing mambo-jambo.
 
+Vertices are read from an array. Walls have a `vec2` attribute for the texture,
+and icos a `vec3` for the normal.
+The icosahedron vertices where generated making with Blender3D and
+extracting the info with [PyCollada](https://pycollada.github.io/).
+
 Both renderers have a `draw` method which takes the shader program,
 sets the appropriate matrices in the shader's uniforms and renders a VAO.
 
