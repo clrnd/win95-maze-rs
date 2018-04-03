@@ -99,8 +99,8 @@ VAO (vertex array object) and does the OpenGL initializing mambo-jambo.
 
 Vertices are read from an array. Walls have a `vec2` attribute for the texture,
 and icos a `vec3` for the normal.
-The icosahedron vertices where generated making with Blender3D and
-extracting the info with [PyCollada](https://pycollada.github.io/).
+The icosahedron vertices where generated with Blender3D and
+the info extracted with [PyCollada](https://pycollada.github.io/).
 
 Both renderers have a `draw` method which takes the shader program,
 sets the appropriate matrices in the shader's uniforms and renders a VAO.
@@ -176,7 +176,7 @@ enum State {
 ```
 
 to control the camera, which after the completion of the
-movement methods, decides which state to take next with the position of
+movement methods, decides what state to take next based on the position of
 the icosahedrons and the walker's direction.
 
 `Rolling` is for when the camera hits an icosahedron, which makes it go upside down
