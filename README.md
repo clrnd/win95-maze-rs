@@ -184,7 +184,7 @@ and deletes the ico from the world.
 
 ## Screenshots
 
-[A short video.](https://raw.githubusercontent.com/alvare/win95-maze-rs/master/screenshots/demo.webm)
+A short video: https://youtu.be/Dt6NTzJ0nyk
 
 ![hallway](https://raw.githubusercontent.com/alvare/win95-maze-rs/master/screenshots/4.png)
 
