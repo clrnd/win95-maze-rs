@@ -39,8 +39,8 @@ impl Direction {
 }
 
 impl<'a> Walker<'a> {
-    pub fn new(maze: &Maze) -> Walker {
-        let direction = if maze.south(0, 0) {
+    pub fn new(maze: &Maze, i: usize, j: usize) -> Walker {
+        let direction = if maze.south(i, j) {
             Direction::East
         } else {
             Direction::South
@@ -49,8 +49,8 @@ impl<'a> Walker<'a> {
         Walker {
             maze: maze,
             direction: direction,
-            i: 0,
-            j: 0
+            i: i,
+            j: j
         }
     }
 

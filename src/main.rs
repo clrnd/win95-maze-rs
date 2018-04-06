@@ -6,6 +6,7 @@ extern crate rand;
 
 mod util;
 mod ico;
+mod rat;
 mod shader;
 mod maze;
 mod wall;
@@ -21,13 +22,14 @@ use std::collections::HashMap;
 use cgmath::{Matrix3, Matrix4, Deg, perspective, vec3, InnerSpace};
 use glfw::{Action, Context, Key};
 
-use wall::{Wall, WallRenderer, TexType};
+use wall::{Wall, WallRenderer};
 use ico::{Ico, IcoRenderer};
+use rat::{Rat, RatRenderer};
 use shader::Shader;
 use maze::Maze;
 use walker::Walker;
 use camera::Camera;
-use texture::Texture;
+use texture::{Texture, TexType};
 
 
 const WIDTH: u32 = 800;
@@ -88,18 +90,16 @@ fn main() {
         (set_up_shaders(proj), set_up_textures())
     };
 
-    let mut wall_renderer = unsafe {
-        WallRenderer::new(textures)
-    };
+    let mut wall_renderer = unsafe { WallRenderer::new() };
     let walls = gen_walls(&maze);
 
-    let ico_renderer = unsafe {
-        IcoRenderer::new()
-    };
+    let ico_renderer = unsafe { IcoRenderer::new() };
     let mut icos = gen_icos(&maze);
 
-    let mut walker = Walker::new(&maze);
+    let rat_renderer = unsafe { RatRenderer::new() };
+    let mut rats = gen_rats(&maze);
 
+    let mut walker = Walker::new(&maze, 0, 0);
     let mut camera = Camera::new(walker.i, walker.j,
                                  walker.direction.to_vec());
 
@@ -164,6 +164,11 @@ fn main() {
             };
         };
 
+        // update rats
+        for rat in &mut rats {
+            rat.update(delta_time);
+        }
+
         // manual movement
         //handle_input(&window, &mut camera, delta_time * 3.0);
 
@@ -185,14 +190,30 @@ fn main() {
             gl::ClearColor(0.2, 0.3, 0.3, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
+            // set the camera matrix
             shader_program.set_mat4(c_str!("view"), view);
 
-            shader_program.set_bool(c_str!("solid"), false);
+            // walls have non alpha textures, and are not shaded
+            shader_program.set_bool(c_str!("rat"), false);
+            shader_program.set_bool(c_str!("alpha"), false);
+            shader_program.set_bool(c_str!("shaded"), false);
             for wall in &walls {
-                wall_renderer.draw(&shader_program, wall);
+                wall_renderer.draw(&shader_program, &textures, wall);
             }
 
-            shader_program.set_bool(c_str!("solid"), true);
+            // rats have a single texture with alpha
+            shader_program.set_bool(c_str!("rat"), true);
+            shader_program.set_bool(c_str!("alpha"), true);
+            let rat_tex = textures[&TexType::Rat].number as i32;
+            shader_program.set_int(c_str!("tex"), rat_tex);
+            shader_program.set_int(c_str!("tiling"), TexType::Rat.tiling());
+            for rat in &rats {
+                rat_renderer.draw(&shader_program, rat);
+            }
+
+            // finally, icos are shaded
+            shader_program.set_bool(c_str!("rat"), false);
+            shader_program.set_bool(c_str!("shaded"), true);
             for (_, ico) in &icos {
                 ico_renderer.draw(&shader_program, ico, current_time as f32);
             }
@@ -285,18 +306,18 @@ fn gen_walls(maze: &Maze)  -> Vec<Wall> {
 }
 
 fn gen_icos(maze: &Maze) -> HashMap<(usize, usize), Ico> {
-    // let's say there is 8% of tiles with an icosahedron
-    let total = (maze.width - 1) * (maze.height - 1);
-    let count = cmp::max(8 * total / 100, 2);
+    // let's say there is 6% of tiles with an icosahedron
+    let total = maze.width * maze.height;
+    let count = cmp::max(6 * total / 100, 2);
     let indices = rand::seq::sample_indices(
         &mut rand::thread_rng(), total, count);
     let rnd_f = || rand::random::<f32>() * 2.0 - 1.0;
 
     let mut icos = HashMap::new();
 
-    for x in indices {
-        let i = x / (maze.width - 1);
-        let j = x % (maze.width - 1);
+    for e in indices {
+        let i = e / maze.width;
+        let j = e % maze.width;
 
         icos.insert(
             (i, j),
@@ -308,6 +329,30 @@ fn gen_icos(maze: &Maze) -> HashMap<(usize, usize), Ico> {
     }
 
     icos
+}
+
+fn gen_rats(maze: &Maze) -> Vec<Rat> {
+    // let's say there is 2% of tiles with a rat initially
+    let total = maze.width * maze.height;
+    let count = cmp::max(2 * total / 100, 2);
+    let indices = rand::seq::sample_indices(
+        &mut rand::thread_rng(), total, count);
+
+    let mut vec = Vec::new();
+
+    for e in indices {
+        let i = e / maze.width;
+        let j = e % maze.width;
+        println!("{}, {}", i, j);
+
+        let mut walker = Walker::new(&maze, i, j);
+        walker.next();
+        vec.push(Rat {
+            pos: vec3(j as f32 + 0.5, 0.0, i as f32 + 0.5),
+            walker: walker
+        });
+    }
+    vec
 }
 
 fn get_rand_tex() -> TexType {
@@ -324,6 +369,7 @@ unsafe fn set_up_textures() -> HashMap<TexType, Texture> {
     textures.insert(TexType::Thing, Texture::new("resources/thing.bmp", 1));
     textures.insert(TexType::Ceiling, Texture::new("resources/ceiling.bmp", 2));
     textures.insert(TexType::Floor, Texture::new("resources/floor.bmp", 3));
+    textures.insert(TexType::Rat, Texture::new("resources/rat.bmp", 4));
 
     for (_, texture) in &textures {
         texture.bind();

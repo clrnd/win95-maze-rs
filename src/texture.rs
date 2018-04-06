@@ -11,6 +11,16 @@ pub struct Texture {
     pub number: u32
 }
 
+#[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum TexType {
+    Rat,
+    Brick,
+    Thing,
+    Ceiling,
+    Floor,
+    Other // dummy type for `last_textype`
+}
+
 impl Texture {
     pub unsafe fn new(name: &str, number: u32) -> Texture {
         let mut id = 0;
@@ -43,5 +53,18 @@ impl Texture {
     pub unsafe fn bind(&self) {
         gl::ActiveTexture(gl::TEXTURE0 + self.number);
         gl::BindTexture(gl::TEXTURE_2D, self.id);
+    }
+}
+
+impl TexType {
+    pub fn tiling(&self) -> i32 {
+        match *self {
+            TexType::Rat |
+            TexType::Brick |
+            TexType::Thing => 1,
+            TexType::Ceiling |
+            TexType::Floor => 4,
+            _ => panic!()
+        }
     }
 }
