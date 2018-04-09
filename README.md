@@ -109,6 +109,7 @@ The wall renderer has an extra check for when the texture type changed
 between drawings, so it only has to set those uniforms when needed.
 To maximize the benefit of this, walls are ordered by texture type.
 
+Finally, rats are like a camera. They each have a walker to move trough the maze.
 
 ### Shaders
 
@@ -119,12 +120,29 @@ model, view and projection matrices and then just passes the
 texture and normal properties down the pipeline to the fragment shader:
 
 ```glsl
-gl_Position = proj * view * model * vec4(aPos, 1.0);
+if (rat) {
+    ...
+} else {
+    gl_Position = proj * view * model * vec4(aPos, 1.0);
+}
 oTex = aTex;
 oNor = mat3(transpose(inverse(model))) * aNor;
 ```
 
-Here, we find a little abuse of OpenGL's flexibility:
+Unless the `rat` bool is true, then it reset the rotations so the rats
+always face the camera, like in the original:
+
+```glsl
+if (rat) {
+    // reset rotation part of the model view matrix
+    mat4 mv = mat4(1.0);
+    mat4 tmp = view * model;
+    mv[3] = tmp[3];
+    gl_Position = proj * mv * vec4(aPos, 1.0);
+}
+```
+
+Here, we also find a little abuse of OpenGL's flexibility:
 
 ```glsl
 layout (location = 0) in vec3 aPos;
@@ -151,7 +169,9 @@ but not the second, and vice versa for the `WallRenderer`. I'm not sure if this
 was smart or just plain awful though.
 
 Finally the fragment shader, decides based on a `solid` flag, if to render using
-a texture or a diffuse lighting color:
+a texture or a diffuse lighting color. Also, if the current fragment is pure
+green and `alpha` is true, it discards it to simulate transparency
+on BMP images:
 
 ```glsl
 if (solid) {
@@ -159,7 +179,12 @@ if (solid) {
     float diffuse = max(dot(oNor, lightDir), 0.2);
     FragColor = vec4(color * diffuse * 0.2, 0.0);
 } else {
-    FragColor = texture(tex, oTex * tiling);
+    vec4 color = texture(tex, oTex * tiling);
+    // if has alpha and pure green, discard
+    if (alpha && color.rgb == vec3(0.0, 1.0, 0.0)) {
+        discard;
+    }
+    FragColor = color;
 }
 ```
 
