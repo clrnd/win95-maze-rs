@@ -74,7 +74,7 @@ When they return `true`, it means we need to calculate the next state.
 
 ### Walker
 
-To know where to move the camera when navigating the maze, we have a `Walker`:
+To know how to move around the maze, we have a `Walker`:
 
 ```rust
 pub struct Walker<'a> {
@@ -86,7 +86,15 @@ pub struct Walker<'a> {
 ```
 
 This holds a reference to the maze and a position inside it in grid coordinates,
-and a `direction` used to know where the camera needs to look to.
+plus a `direction` enum
+
+```
+pub enum Direction {
+    North, East, South, West
+}
+```
+
+used simply to know where to move/look in vector coordinates.
 
 The walker has a `next` method, which calculates the next position and direction.
 It will always move forward and choose randomly in a bifurcation.
@@ -98,18 +106,22 @@ vector and other specific data. Each has an associated renderer struct which hol
 VAO (vertex array object) and does the OpenGL initializing mambo-jambo.
 
 Vertices are read from an array. Walls have a `vec2` attribute for the texture,
-and icos a `vec3` for the normal.
+and icos a `vec3` for the normal (used for shading).
 The icosahedron vertices where generated with Blender3D and
 the info extracted with [PyCollada](https://pycollada.github.io/).
 
-Renderers have a `draw` method which takes the shader program,
+Each kind of object has a renderer: `WallRenderer`, `IcoRenderer` and `RatRenderer`.
+These have a `set_up` method which handles uniform variables and maybe textures,
+that is things that don't change between object instances.
+Finally they have a `draw` method which takes the shader program,
 sets the appropriate matrices in the shader's uniforms and renders a VAO.
 
 The wall renderer has an extra check for when the texture type changed
 between drawings, so it only has to set those uniforms when needed.
 To maximize the benefit of this, walls are ordered by texture type.
 
-Finally, rats are like a camera. They each have a walker to move trough the maze.
+Finally, rats are like a camera. They each have a walker to move trough the maze,
+and a special handling in the shaders to fake transparency.
 
 ### Shaders
 
@@ -129,8 +141,8 @@ oTex = aTex;
 oNor = mat3(transpose(inverse(model))) * aNor;
 ```
 
-Unless the `rat` bool is true, then it resets the rotations so the rats
-always face the camera, like in the original:
+Unless the `rat` bool is true, in which case it resets the rotations so the rats
+always face the camera like in the original:
 
 ```glsl
 if (rat) {
@@ -159,16 +171,13 @@ So the `IcoRenderer` enables the third attribute (counting from 0):
 
 ```rust
 // aNor = 2
-gl::VertexAttribPointer(2, 3, gl::FLOAT, gl::FALSE,
-                        6 * mem::size_of::<GLfloat>() as GLint,
-                        (3 * mem::size_of::<GLfloat>()) as *const GLvoid);
 gl::EnableVertexAttribArray(2);
 ```
 
 but not the second, and vice versa for the `WallRenderer`. I'm not sure if this
 was smart or just plain awful though.
 
-Finally the fragment shader, decides based on a `solid` flag, if to render using
+Finally the fragment shader decides, based on a `solid` flag, if to render using
 a texture or a diffuse lighting color. Also, if the current fragment is pure
 green and `alpha` is true, it discards it to simulate transparency
 on BMP images:
@@ -204,8 +213,8 @@ to control the camera, which after the completion of the
 movement methods, decides what state to take next based on the position of
 the icosahedrons and the walker's direction.
 
-`Rolling` is for when the camera hits an icosahedron, which makes it go upside down
-and deletes the ico from the world.
+`Rolling` is for when the camera hits an icosahedron, which makes the former
+go upside down and deletes the ico.
 
 ## Screenshots
 
@@ -214,3 +223,5 @@ A short video: https://youtu.be/Dt6NTzJ0nyk
 ![hallway](https://raw.githubusercontent.com/alvare/win95-maze-rs/master/screenshots/4.png)
 
 ![icosahedron](https://raw.githubusercontent.com/alvare/win95-maze-rs/master/screenshots/5.png)
+
+![rat](https://raw.githubusercontent.com/alvare/win95-maze-rs/master/screenshots/6.png)

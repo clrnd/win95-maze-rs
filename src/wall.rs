@@ -85,6 +85,12 @@ impl WallRenderer {
         }
     }
 
+    pub unsafe fn set_up(&self, shader_program: &Shader) {
+        shader_program.set_bool(c_str!("rat"), false);
+        shader_program.set_bool(c_str!("alpha"), false);
+        shader_program.set_bool(c_str!("shaded"), false);
+    }
+
     pub unsafe fn draw(&mut self,
                        shader_program: &Shader,
                        textures: &HashMap<TexType, Texture>,

@@ -121,6 +121,11 @@ impl IcoRenderer {
         }
     }
 
+    pub unsafe fn set_up(&self, shader_program: &Shader) {
+        shader_program.set_bool(c_str!("rat"), false);
+        shader_program.set_bool(c_str!("shaded"), true);
+    }
+
     pub unsafe fn draw(&self, shader_program: &Shader, ico: &Ico, t: f32) {
 
         gl::BindVertexArray(self.vao);

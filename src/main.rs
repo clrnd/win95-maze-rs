@@ -177,7 +177,7 @@ fn main() {
                                     camera.up);
 
         // FPS counting
-        if (current_time - last_second) > 1.0 {
+        if cfg!(debug_assertions) && (current_time - last_second) > 1.0 {
             last_second = current_time;
             println!("FPS: {}", frame_count);
             frame_count = 0;
@@ -194,26 +194,19 @@ fn main() {
             shader_program.set_mat4(c_str!("view"), view);
 
             // walls have non alpha textures, and are not shaded
-            shader_program.set_bool(c_str!("rat"), false);
-            shader_program.set_bool(c_str!("alpha"), false);
-            shader_program.set_bool(c_str!("shaded"), false);
+            wall_renderer.set_up(&shader_program);
             for wall in &walls {
                 wall_renderer.draw(&shader_program, &textures, wall);
             }
 
             // rats have a single texture with alpha
-            shader_program.set_bool(c_str!("rat"), true);
-            shader_program.set_bool(c_str!("alpha"), true);
-            let rat_tex = textures[&TexType::Rat].number as i32;
-            shader_program.set_int(c_str!("tex"), rat_tex);
-            shader_program.set_int(c_str!("tiling"), TexType::Rat.tiling());
+            rat_renderer.set_up(&shader_program, &textures);
             for rat in &rats {
                 rat_renderer.draw(&shader_program, rat);
             }
 
             // finally, icos are shaded
-            shader_program.set_bool(c_str!("rat"), false);
-            shader_program.set_bool(c_str!("shaded"), true);
+            ico_renderer.set_up(&shader_program);
             for (_, ico) in &icos {
                 ico_renderer.draw(&shader_program, ico, current_time as f32);
             }
@@ -343,7 +336,6 @@ fn gen_rats(maze: &Maze) -> Vec<Rat> {
     for e in indices {
         let i = e / maze.width;
         let j = e % maze.width;
-        println!("{}, {}", i, j);
 
         let mut walker = Walker::new(&maze, i, j);
         walker.next();

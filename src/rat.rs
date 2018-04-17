@@ -1,11 +1,13 @@
 use std::mem;
 use std::ptr;
 use std::ffi::CStr;
+use std::collections::HashMap;
 
 use gl;
 use gl::types::*;
 use cgmath::{Matrix4, Vector3, EuclideanSpace, InnerSpace, MetricSpace};
 
+use texture::{Texture, TexType};
 use shader::Shader;
 use walker::Walker;
 
@@ -43,6 +45,7 @@ impl<'a> Rat<'a> {
 
         // if new_dir is opposite direction from old_dir
         // then we went through, just assign it
+        // and update the walker
         let new_dir = (p_to - self.pos).normalize();
         if old_dir.distance(new_dir) >= 0.5 {
             self.pos = p_to;
@@ -97,9 +100,18 @@ impl RatRenderer {
         }
     }
 
-    pub unsafe fn draw(&self,
-                       shader_program: &Shader,
-                       rat: &Rat) {
+    pub unsafe fn set_up(&self,
+                         shader_program: &Shader,
+                         textures: &HashMap<TexType, Texture>) {
+        shader_program.set_bool(c_str!("rat"), true);
+        shader_program.set_bool(c_str!("alpha"), true);
+
+        let rat_tex = textures[&TexType::Rat].number as i32;
+        shader_program.set_int(c_str!("tex"), rat_tex);
+        shader_program.set_int(c_str!("tiling"), TexType::Rat.tiling());
+    }
+
+    pub unsafe fn draw(&self, shader_program: &Shader, rat: &Rat) {
         gl::BindVertexArray(self.vao);
 
         let model = Matrix4::from_translation(rat.pos);
