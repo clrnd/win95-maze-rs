@@ -102,7 +102,7 @@ and icos a `vec3` for the normal.
 The icosahedron vertices where generated with Blender3D and
 the info extracted with [PyCollada](https://pycollada.github.io/).
 
-Both renderers have a `draw` method which takes the shader program,
+Renderers have a `draw` method which takes the shader program,
 sets the appropriate matrices in the shader's uniforms and renders a VAO.
 
 The wall renderer has an extra check for when the texture type changed
@@ -129,7 +129,7 @@ oTex = aTex;
 oNor = mat3(transpose(inverse(model))) * aNor;
 ```
 
-Unless the `rat` bool is true, then it reset the rotations so the rats
+Unless the `rat` bool is true, then it resets the rotations so the rats
 always face the camera, like in the original:
 
 ```glsl
