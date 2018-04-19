@@ -100,7 +100,7 @@ impl IcoRenderer {
         gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
         gl::BufferData(gl::ARRAY_BUFFER,
                        mem::size_of::<[f32; 360]>() as isize,
-                       &VERTICES[0] as *const f32 as *const _,
+                       VERTICES.as_ptr() as *const _,
                        gl::STATIC_DRAW);
 
         //* vertex attribs

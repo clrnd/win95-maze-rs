@@ -56,14 +56,14 @@ impl WallRenderer {
         gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
         gl::BufferData(gl::ARRAY_BUFFER,
                        mem::size_of::<[f32; 20]>() as isize,
-                       &VERTICES[0] as *const f32 as *const _,
+                       VERTICES.as_ptr() as *const _,
                        gl::STATIC_DRAW);
 
         //* EBO data
         gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
         gl::BufferData(gl::ELEMENT_ARRAY_BUFFER,
                        mem::size_of::<[u32; 6]>() as isize,
-                       &INDICES[0] as *const u32 as *const _,
+                       INDICES.as_ptr() as *const _,
                        gl::STATIC_DRAW);
 
         //* vertex attribs

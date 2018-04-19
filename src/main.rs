@@ -84,9 +84,9 @@ fn main() {
     let mut state = State::Walking;
 
     let ratio = width as f32 / height as f32;
-    let proj = perspective(Deg(60.0), ratio, 0.1, 100.0);
 
     let (shader_program, textures) = unsafe {
+        let proj = perspective(Deg(60.0), ratio, 0.1, 100.0);
         (set_up_shaders(proj), set_up_textures())
     };
 
@@ -100,14 +100,13 @@ fn main() {
     let mut rats = gen_rats(&maze);
 
     let mut walker = Walker::new(&maze, 0, 0);
-    let mut camera = Camera::new(walker.i, walker.j,
-                                 walker.direction.to_vec());
+    let mut camera = Camera::new(0, 0, walker.direction.to_vec());
+    walker.next();
 
     let mut frame_count = 0;
     let mut last_second = glfw.get_time();
     let mut last_frame = glfw.get_time();
 
-    walker.next();
     while !window.should_close() {
         // input and stuff
         for (_, event) in glfw::flush_messages(&events) {
@@ -220,6 +219,15 @@ fn main() {
 fn gen_walls(maze: &Maze)  -> Vec<Wall> {
 
     let mut walls = Vec::new();
+
+    fn get_rand_tex() -> TexType {
+        if rand::random::<f32>() < 0.9 {
+            TexType::Brick
+        } else {
+            TexType::Thing
+        }
+    }
+
 
     // north walls
     for j in 0..maze.width {
@@ -345,14 +353,6 @@ fn gen_rats(maze: &Maze) -> Vec<Rat> {
         });
     }
     vec
-}
-
-fn get_rand_tex() -> TexType {
-    if rand::random::<f32>() < 0.9 {
-        TexType::Brick
-    } else {
-        TexType::Thing
-    }
 }
 
 unsafe fn set_up_textures() -> HashMap<TexType, Texture> {
