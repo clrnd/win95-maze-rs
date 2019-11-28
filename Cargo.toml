@@ -4,8 +4,8 @@ version = "0.1.0"
 authors = ["clrnd <welcometothechango@gmail.com>"]
 
 [dependencies]
-gl = "*"
-glfw = "*"
-image = "*"
-cgmath = "*"
-rand = "0.4"
+gl = "^0.10"
+glfw = "^0.21"
+image = "^0.18"
+cgmath = "^0.16"
+rand = "^0.4"

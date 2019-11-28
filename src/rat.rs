@@ -32,8 +32,7 @@ pub struct Rat<'a> {
 
 #[derive(Debug)]
 pub struct RatRenderer {
-    vao: GLuint,
-    vbo: GLuint
+    vao: GLuint
 }
 
 impl<'a> Rat<'a> {
@@ -95,16 +94,17 @@ impl RatRenderer {
         gl::EnableVertexAttribArray(1);
 
         RatRenderer {
-            vao: vao,
-            vbo: vbo
+            vao: vao
         }
     }
 
     pub unsafe fn set_up(&self,
                          shader_program: &Shader,
                          textures: &HashMap<TexType, Texture>) {
+        gl::BindVertexArray(self.vao);
+
         shader_program.set_bool(c_str!("rat"), true);
-        shader_program.set_bool(c_str!("alpha"), true);
+        shader_program.set_bool(c_str!("shaded"), false);
 
         let rat_tex = textures[&TexType::Rat].number as i32;
         shader_program.set_int(c_str!("tex"), rat_tex);
@@ -112,8 +112,6 @@ impl RatRenderer {
     }
 
     pub unsafe fn draw(&self, shader_program: &Shader, rat: &Rat) {
-        gl::BindVertexArray(self.vao);
-
         let model = Matrix4::from_translation(rat.pos);
 
         shader_program.set_mat4(c_str!("model"), model);

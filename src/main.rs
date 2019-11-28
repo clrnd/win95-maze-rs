@@ -192,7 +192,7 @@ fn main() {
             // set the camera matrix
             shader_program.set_mat4(c_str!("view"), view);
 
-            // walls have non alpha textures, and are not shaded
+            // walls are not shaded nor rats
             wall_renderer.set_up(&shader_program);
             for wall in &walls {
                 wall_renderer.draw(&shader_program, &textures, wall);
@@ -333,9 +333,9 @@ fn gen_icos(maze: &Maze) -> HashMap<(usize, usize), Ico> {
 }
 
 fn gen_rats(maze: &Maze) -> Vec<Rat> {
-    // let's say there is 2% of tiles with a rat initially
+    // let's say there is 5% of tiles with a rat initially
     let total = maze.width * maze.height;
-    let count = cmp::max(2 * total / 100, 2);
+    let count = cmp::max(5 * total / 100, 2);
     let indices = rand::seq::sample_indices(
         &mut rand::thread_rng(), total, count);
 

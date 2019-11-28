@@ -22,5 +22,6 @@ void main() {
         gl_Position = proj * view * model * vec4(aPos, 1.0);
     }
     oTex = aTex;
+    // normal matrix
     oNor = mat3(transpose(inverse(model))) * aNor;
 }

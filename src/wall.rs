@@ -34,8 +34,7 @@ pub struct Wall {
 #[derive(Debug)]
 pub struct WallRenderer {
     last_textype: TexType,
-    vao: GLuint,
-    vbo: GLuint
+    vao: GLuint
 }
 
 impl WallRenderer {
@@ -69,7 +68,7 @@ impl WallRenderer {
         //* vertex attribs
         // aPos = 0
         gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE,
-                                5 * mem::size_of::<GLfloat>() as GLint,
+                                5 * mem::size_of::<f32>() as GLint,
                                 ptr::null());
         gl::EnableVertexAttribArray(0);
         // aTex = 1
@@ -80,14 +79,14 @@ impl WallRenderer {
 
         WallRenderer {
             last_textype: TexType::Other,
-            vao: vao,
-            vbo: vbo
+            vao: vao
         }
     }
 
     pub unsafe fn set_up(&self, shader_program: &Shader) {
+        gl::BindVertexArray(self.vao);
+
         shader_program.set_bool(c_str!("rat"), false);
-        shader_program.set_bool(c_str!("alpha"), false);
         shader_program.set_bool(c_str!("shaded"), false);
     }
 
@@ -95,8 +94,6 @@ impl WallRenderer {
                        shader_program: &Shader,
                        textures: &HashMap<TexType, Texture>,
                        wall: &Wall) {
-        gl::BindVertexArray(self.vao);
-
         let model = Matrix4::from_translation(wall.pos) *
                     Matrix4::from_angle_y(Deg(wall.angle_y)) *
                     Matrix4::from_angle_x(Deg(wall.angle_x));

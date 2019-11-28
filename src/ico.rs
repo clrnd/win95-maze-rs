@@ -80,8 +80,7 @@ pub struct Ico {
 
 #[derive(Debug)]
 pub struct IcoRenderer {
-    vao: GLuint,
-    vbo: GLuint
+    vao: GLuint
 }
 
 impl IcoRenderer {
@@ -116,19 +115,18 @@ impl IcoRenderer {
         gl::EnableVertexAttribArray(2);
 
         IcoRenderer {
-            vao: vao,
-            vbo: vbo
+            vao: vao
         }
     }
 
     pub unsafe fn set_up(&self, shader_program: &Shader) {
+        gl::BindVertexArray(self.vao);
+
         shader_program.set_bool(c_str!("rat"), false);
         shader_program.set_bool(c_str!("shaded"), true);
     }
 
     pub unsafe fn draw(&self, shader_program: &Shader, ico: &Ico, t: f32) {
-
-        gl::BindVertexArray(self.vao);
 
         let model = Matrix4::from_translation(ico.pos) *
                     Matrix4::from_axis_angle(ico.axis, Deg(t * 100.0)) *
